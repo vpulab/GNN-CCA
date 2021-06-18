@@ -1,0 +1,17 @@
+DATASET:
+    NAME: EPFL-Terrace
+    ROOT: /home/elg/Datasets/
+    N_CLASSES:
+    RESIZE: [128, 64]
+    CROP:
+    FRAME_SAMPLING:
+    MEAN: [0.485, 0.456, 0.406]
+    STD: [0.229, 0.224, 0.225]
+    ZERO_PADDING: False
+
+
+
+CNN_MODEL:
+    arch: resnet50
+    model_weights_path:
+        resnet50: ./trained_models/reid/resnet50_market_cuhk_duke.tar-232
