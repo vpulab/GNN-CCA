@@ -116,7 +116,6 @@ def my_collate(batch):
     return [bboxes_batches, df_batches]#[bboxes_batches, frames_batches, ids_batches, ids_cam_batches]
 
 
-
 global USE_CUDA, CONFIG
 
 USE_CUDA = torch.cuda.is_available()
@@ -163,96 +162,8 @@ train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=CONFIG['TRA
 validation_loader = torch.utils.data.DataLoader(val_dataset, batch_size=CONFIG['TRAINING']['BATCH_SIZE']['VAL'], shuffle=False,
                                        num_workers=CONFIG['DATALOADER']['NUM_WORKERS'], collate_fn=my_collate,pin_memory=CONFIG['DATALOADER']['PIN_MEMORY'])
 print('suffle')
-if CONFIG['MODE'] == 'GNN':
-    #LOAD MPN NETWORK#
 
-    mpn_model = load_model_mpn(CONFIG)
-    mpn_model.cuda()
-    num_params_mpn  = sum([np.prod(p.size()) for p in mpn_model.parameters()])
-
-    ## LOSS AND OPTIMIZER
-
-    # optim_class = CONFIG['TRAINING']['OPTIMIZER']['type']
-    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, mpn_model.parameters()), lr=CONFIG['TRAINING']['OPTIMIZER']['args']['lr'])
-
-    # avg per epoch
-    training_loss_avg = []
-    training_precision_1_avg = []
-    training_precision_0_avg = []
-
-    val_loss_avg = []
-    val_precision_1_avg = []
-    val_precision_0_avg = []
-    val_prec_in_history = []
-
-    # all, per iteration
-    train_loss_in_history = []
-    train_prec0_in_history = []
-    train_prec1_in_history = []
-    train_prec_in_history = []
-
-    val_loss_in_history = []
-    val_prec0_in_history = []
-    val_prec1_in_history = []
-
-
-    ## TRAINING
-    best_prec = 0
-
-    for epoch in range(0, CONFIG['TRAINING']['EPOCHS']):
-        epoch_start = time.time()
-
-        train_losses,train_precision_1, train_precision_0,train_loss_in_history, train_prec1_in_history,train_prec0_in_history,train_prec_in_history = \
-            train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_path,train_loss_in_history,train_prec1_in_history,train_prec0_in_history,train_prec_in_history,train_dataset,dataset_dir)
-
-        training_loss_avg.append(train_losses.avg)
-        training_precision_1_avg.append(train_precision_1.avg)
-        training_precision_0_avg.append(train_precision_0.avg)
-
-        val_losses, val_precision_1, val_precision_0,val_loss_in_history,val_prec1_in_history,val_prec0_in_history,val_prec_in_history = \
-           validate(CONFIG,validation_loader, cnn_model, mpn_model, results_path,epoch,val_loss_in_history,val_prec1_in_history,val_prec0_in_history,val_prec_in_history,val_dataset,dataset_dir )
-
-        val_loss_avg.append(val_losses.avg)
-        val_precision_1_avg.append(val_precision_1.avg)
-        val_precision_0_avg.append(val_precision_0.avg)
-
-        plt.figure()
-        plt.plot(training_precision_1_avg, label='Training Prec class 1')
-        plt.plot(training_precision_0_avg, label='Training Prec class 0')
-        plt.plot(val_precision_1_avg, label='Validation Prec class 1')
-        plt.plot(val_precision_0_avg, label='Validation Prec class 0')
-        plt.plot((np.asarray(training_precision_1_avg) + np.asarray(training_precision_0_avg)) / 2, '--',   label='Training MCA')
-        plt.plot((np.asarray(val_precision_1_avg) + np.asarray(val_precision_0_avg)) / 2, '--', label='Validation MCA')
-        plt.ylabel('Precision'), plt.xlabel('Epoch')
-        plt.legend()
-        plt.savefig(results_path + '/images/Precision Per Epoch.pdf', bbox_inches='tight')
-        plt.close()
-        plt.figure()
-        plt.plot(training_loss_avg, label='Training loss')
-        plt.plot(val_loss_avg,  label='Validation loss')
-        plt.ylabel('Loss'), plt.xlabel('Epoch')
-        plt.legend()
-        plt.savefig(results_path + '/images/Loss per Epoch.pdf', bbox_inches='tight')
-        plt.close()
-
-
-        is_best = (val_precision_1.avg + val_precision_0.avg)/2 > best_prec
-        best_prec = max((val_precision_1.avg + val_precision_0.avg)/2, best_prec)
-        # SEGMENTATION
-        utils.save_checkpoint({
-            'epoch': epoch + 1,
-            'model_state_dict': mpn_model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'best_prec': best_prec,
-            'model_parameters': num_params_mpn,
-
-            'CONFIG': CONFIG
-        }, is_best, results_path, CONFIG['ID'])
-
-
-        print('Elapsed time for epoch {}: {time:.3f} minutes'.format(epoch, time=(time.time() - epoch_start) / 60))
-
-elif CONFIG['MODE'] == 'REID':
+if CONFIG['MODE'] == 'REID':
     val_prec0_in_history = []
     val_prec1_in_history = []
 
