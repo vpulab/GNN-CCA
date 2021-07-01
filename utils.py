@@ -296,6 +296,64 @@ def compute_SCC_and_Clusters(G,n_nodes):
     #
     return ID_pred, n_components_pred
 
+
+def disjoint_big_clusters(ID_pred, predictions, preds_prob, edge_list,data_batch,predicted_act_edges):
+    # Count how many items in each class, then look which cluster label is the one with more than 4 elements (# cameras)
+    label_ID_to_disjoint = np.where(np.bincount(ID_pred) > 4)[0]
+    if len(label_ID_to_disjoint) >= 1:
+        global_idx_new_predicted_active_edges = [pos for pos, p in enumerate(predictions) if p == 1]
+
+        # COMPROBAR SI HAY DOS
+        for l in label_ID_to_disjoint:
+            flag_need_disjoint = True
+            while flag_need_disjoint:
+                global_idx_new_predicted_active_edges = [pos for pos, p in enumerate(predictions) if p == 1]
+
+                nodes_to_disjoint = np.where(ID_pred == l)
+                idx_active_edges_to_disjoint = [pos for pos, n in enumerate(predicted_act_edges) if
+                                                np.any(np.in1d(nodes_to_disjoint, n))]
+                global_idx_edges_disjoint = np.asarray(global_idx_new_predicted_active_edges)[
+                    np.asarray(idx_active_edges_to_disjoint)]
+                min_prob = np.min(preds_prob[global_idx_edges_disjoint].cpu().numpy())
+                global_idx_min_prob = np.where(preds_prob.cpu().numpy() == min_prob)[0]
+                predictions[global_idx_min_prob] = 0
+
+                # Check if still need to disjoint
+
+                predicted_act_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in
+                                              enumerate(predictions) if p == 1]
+
+                G = nx.DiGraph(predicted_act_edges)
+                ID_pred, n_clusters_pred = compute_SCC_and_Clusters(G,
+                                                                                            data_batch.num_nodes)
+
+                if np.bincount(ID_pred)[l] > 4:
+                    flag_need_disjoint = True
+                else:
+                    flag_need_disjoint = False
+                    disjoint_big_clusters(ID_pred, predictions, preds_prob, edge_list, data_batch, predicted_act_edges)
+
+    return predictions
+def remove_edges_single_direction(active_edges, predictions, edge_list):
+    idx_active_edges_to_remove = [pos for pos, n in enumerate(active_edges) if (n[::-1] not in active_edges)]
+    if idx_active_edges_to_remove != []:
+        predicted_active_edges_global_pos = [pos for pos, p in enumerate(predictions) if p == 1]
+
+        global_idx_edges_to_remove = np.asarray(predicted_active_edges_global_pos)[np.asarray(idx_active_edges_to_remove)]
+        new_predictions = predictions.clone()
+        new_predictions[global_idx_edges_to_remove] = 0
+
+        new_predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in
+                                      enumerate(new_predictions) if p == 1]
+
+    else:
+        new_predictions = predictions.clone()
+        new_predicted_active_edges = active_edges
+
+
+    return new_predictions, new_predicted_active_edges
+
+
 def save_checkpoint(state, is_best, path, filename):
     torch.save(state, path + '/files/' + filename + '_latest.pth.tar')
 

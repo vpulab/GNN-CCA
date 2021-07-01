@@ -916,10 +916,6 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
 
                 if i==753:
                     a=1
-                # # COMPUTE GREEDY ROUNDING
-                if CONFIG['ROUNDING']:
-                   new_predictions = utils.compute_rounding(data_batch, predictions.view(-1), preds_prob)
-
 
 
                 # CLUSTERING IDENTITIES MEASURES
@@ -933,9 +929,26 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
 
                 predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in enumerate(predictions) if p == 1]
                 G = nx.DiGraph(predicted_active_edges)
-                ID_pred, n_clusters_pred = utils.compute_SCC_and_Clusters(G,data_batch.num_nodes)
+                new_ID_pred, n_clusters_pred = utils.compute_SCC_and_Clusters(G,data_batch.num_nodes)
                 print('# Clusters:  ' + str(n_clusters_pred))
-                print(ID_pred)
+                print(new_ID_pred)
+
+                if CONFIG['CUTTING']:
+                    predictions, predicted_active_edges = utils.remove_edges_single_direction(predicted_active_edges,
+                                                                                     predictions, edge_list)
+                    G = nx.DiGraph(predicted_active_edges)
+                    new_ID_pred, n_clusters_pred = utils.compute_SCC_and_Clusters(G, data_batch.num_nodes)
+                    print('# Clusters CUT:  ' + str(n_clusters_pred))
+                    print(new_ID_pred)
+
+
+                # # COMPUTE GREEDY ROUNDING
+                if CONFIG['ROUNDING']:
+                    new_predictions = utils.compute_rounding(data_batch, predictions.view(-1), preds_prob)
+
+                else:
+                    new_predictions = []
+
 
                 # label_ID_to_disjoint = np.where(np.bincount(ID_pred) > 4)
                 # if len(label_ID_to_disjoint) > 1:
@@ -951,64 +964,40 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
                 if new_predictions != []:
                     new_predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in
                                               enumerate(new_predictions) if p == 1]
+
                     rounding_G = nx.DiGraph(new_predicted_active_edges)
-                    rounding_ID_pred,rounding_n_clusters_pred = utils.compute_SCC_and_Clusters(rounding_G, data_batch.num_nodes)
-
-                    # Count how many items in each class, then look which cluster label is the one with more than 4 elements (# cameras)
-                    label_ID_to_disjoint = np.where(np.bincount(rounding_ID_pred) > 4)
-                    if len(label_ID_to_disjoint) > 1:
-                        a=1
-                    global_idx_new_predicted_active_edges = [pos for pos, p in enumerate(new_predictions) if p == 1]
-
-                    #COMPROBAR SI HAY DOS
-                    for l in label_ID_to_disjoint:
-                        flag_need_disjoint = True
-                        while flag_need_disjoint:
-                            global_idx_new_predicted_active_edges = [pos for pos, p in enumerate(new_predictions) if p == 1]
-
-                            nodes_to_disjoint = np.where(rounding_ID_pred == l)
-                            idx_active_edges_to_disjoint = [pos for pos, n in enumerate(new_predicted_active_edges) if np.any(np.in1d(nodes_to_disjoint, n))]
-                            global_idx_edges_disjoint = np.asarray(global_idx_new_predicted_active_edges)[np.asarray(idx_active_edges_to_disjoint)]
-                            min_prob = np.min(preds_prob[global_idx_edges_disjoint].cpu().numpy())
-                            global_idx_min_prob = np.where(preds_prob.cpu().numpy() == min_prob)[0]
-                            new_predictions[global_idx_min_prob] = 0
-
-                            # Check if still need to disjoint
-
-                            new_predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in
-                                                          enumerate(new_predictions) if p == 1]
-
-                            rounding_G = nx.DiGraph(new_predicted_active_edges)
-                            rounding_ID_pred, rounding_n_clusters_pred = utils.compute_SCC_and_Clusters(rounding_G,
-                                                                                                        data_batch.num_nodes)
-
-
-                            if np.bincount(rounding_ID_pred)[l] > 4:
-                                flag_need_disjoint = True
-                            else:
-                                flag_need_disjoint = False
-
-
+                    new_ID_pred,rounding_n_clusters_pred = utils.compute_SCC_and_Clusters(rounding_G, data_batch.num_nodes)
                     print('# Clusters with rounding:  ' + str(rounding_n_clusters_pred))
-                    print(rounding_ID_pred)
-
+                    print(new_ID_pred)
 
                 else:
-                    rounding_ID_pred = ID_pred
+                    new_ID_pred = new_ID_pred
                     new_predictions = predictions
+                    new_predicted_active_edges = predicted_active_edges
 
-                rand_index_rounding.append(metrics.adjusted_rand_score(ID_GT, rounding_ID_pred))
-                rand_index.append(metrics.adjusted_rand_score(ID_GT, ID_pred))
+                if CONFIG['DISJOINT']:
+                    new_predictions = utils.disjoint_big_clusters(new_ID_pred, new_predictions, preds_prob, edge_list, data_batch,new_predicted_active_edges)
+                    new_predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in
+                                                  enumerate(new_predictions) if p == 1]
+                    disjoint_G = nx.DiGraph(new_predicted_active_edges)
+                    new_ID_pred, disjoint_n_clusters_pred = utils.compute_SCC_and_Clusters(disjoint_G,
+                                                                                                data_batch.num_nodes)
+                    print('# Clusters with disjoint:  ' + str(disjoint_n_clusters_pred))
+                    print(new_ID_pred)
 
 
-                TP, FP, TN, FN, P, R, FS = compute_P_R_F(predictions.cpu().numpy(), labels_edges_GT)
+                # rand_index_rounding.append(metrics.adjusted_rand_score(ID_GT, rounding_ID_pred))
+                rand_index.append(metrics.adjusted_rand_score(ID_GT, new_ID_pred))
 
-                TP_r, FP_r, TN_r, FN_r, P_r, R_r, FS_r = compute_P_R_F(new_predictions.cpu().numpy(), labels_edges_GT)
+
+                TP, FP, TN, FN, P, R, FS = compute_P_R_F(new_predictions.cpu().numpy(), labels_edges_GT)
+
+                # TP_r, FP_r, TN_r, FN_r, P_r, R_r, FS_r = compute_P_R_F(new_predictions.cpu().numpy(), labels_edges_GT)
                 # rand_index.append(metrics.adjusted_rand_score(ID_GT, ID_pred))
-                mutual_index.append(metrics.adjusted_mutual_info_score(ID_GT, rounding_ID_pred))
-                homogeneity.append(metrics.homogeneity_score(ID_GT, rounding_ID_pred))
-                completeness.append(metrics.completeness_score(ID_GT, rounding_ID_pred))
-                v_measure.append(metrics.v_measure_score(ID_GT, rounding_ID_pred))
+                mutual_index.append(metrics.adjusted_mutual_info_score(ID_GT, new_ID_pred))
+                homogeneity.append(metrics.homogeneity_score(ID_GT, new_ID_pred))
+                completeness.append(metrics.completeness_score(ID_GT, new_ID_pred))
+                v_measure.append(metrics.v_measure_score(ID_GT, new_ID_pred))
 
 
 
@@ -1020,13 +1009,13 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
                 F_list.append(FS)
                 TN_list.append(TN)
 
-                TP_r_list.append(TP_r)
-                FP_r_list.append(FP_r)
-                FN_r_list.append(FN_r)
-                P_r_list.append(P_r)
-                R_r_list.append(R_r)
-                F_r_list.append(FS_r)
-                TN_r_list.append(TN_r)
+                # TP_r_list.append(TP_r)
+                # FP_r_list.append(FP_r)
+                # FN_r_list.append(FN_r)
+                # P_r_list.append(P_r)
+                # R_r_list.append(R_r)
+                # F_r_list.append(FS_r)
+                # TN_r_list.append(TN_r)
 
                 val_batch_time.update(time.time() - start_time)
 
@@ -1037,7 +1026,7 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
                                               eta=str(datetime.timedelta(seconds=int(val_batch_time.avg * (len(val_loader) - i))))))
 
 
-    return P_list, R_list, F_list, TP_list, FP_list, FN_list, TN_list, rand_index, rand_index_rounding, P_r_list, R_r_list, F_r_list, TP_r_list, FP_r_list, FN_r_list, TN_r_list,mutual_index, homogeneity, completeness, v_measure
+    return P_list, R_list, F_list, TP_list, FP_list, FN_list, TN_list, rand_index,mutual_index, homogeneity, completeness, v_measure
 
 
 def eval_RANK(val_loader, model,CONFIG):

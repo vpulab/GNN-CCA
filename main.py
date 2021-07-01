@@ -156,7 +156,7 @@ train_dataset = datasets.EPFL_dataset(train_set, 'train', CONFIG, cnn_model)
 val_dataset = datasets.EPFL_dataset(val_set, 'validation', CONFIG, cnn_model)
 
 # print("SHUFFLE FALSE")
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'], shuffle=True,
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'], shuffle=False,
                                        num_workers=CONFIG['DATALOADER']['NUM_WORKERS'], collate_fn=my_collate,pin_memory=CONFIG['DATALOADER']['PIN_MEMORY'])
 
 validation_loader = torch.utils.data.DataLoader(val_dataset, batch_size=CONFIG['TRAINING']['BATCH_SIZE']['VAL'], shuffle=False,
@@ -370,7 +370,7 @@ elif CONFIG['MODE'] == 'GNN_eval':
     epoch = 0
 
 
-    P_list, R_list, F_list, TP_list, FP_list, FN_list, TN_list, rand_index, rand_index_rounding, P_r_list, R_r_list, F_r_list, TP_r_list, FP_r_list, FN_r_list, TN_r_list,\
+    P_list, R_list, F_list, TP_list, FP_list, FN_list, TN_list, rand_index,\
         mutual_index, homogeneity, completeness, v_measure = validate_GNN_cross_camera_association(CONFIG, validation_loader, cnn_model, mpn_model)
 
     a=1
@@ -382,7 +382,6 @@ elif CONFIG['MODE'] == 'GNN_eval':
     FN = np.sum(np.asarray(FN_list))
     TN = np.sum(np.asarray(TN_list))
     RI = np.mean(np.asarray(rand_index))
-    RI_r = np.mean(np.asarray(rand_index_rounding))
     MI = np.mean(np.asarray(mutual_index))
     hom = np.mean(np.asarray(homogeneity))
     com = np.mean(np.asarray(completeness))
@@ -397,7 +396,6 @@ elif CONFIG['MODE'] == 'GNN_eval':
     print('FN= ' + str(FN))
     print('TN= '+ str(TN))
     print('Rand index mean = ' + str(RI))
-    print('Rand index rounding mean = ' + str(RI_r))
     print( 'Mutual index mean = ' + str(MI) )
     print( 'homogeneity mean = ' + str(hom) )
     print( 'completeness mean = ' + str(com) )

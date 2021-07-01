@@ -1,10 +1,13 @@
-ID: pruebaGNN_trainTERR_osnet_mscd_onlyapp_2L2_2cos_IMAUG_BN
+ID: prueba_eval_
 COMMENT: nodereid = embed reid  repetido dos veces
 MODE: GNN_eval #GNN, REID, GNN_eval, eval_RANK, REID_th
 
 #FOR GNN EVAL
-ROUNDING: True
-PRETRAINED_GNN_MODEL:  /home/elg/Repositories/GNN-cross-camera-association/results/GNN_trainTERR_bdnetMarket_xtractor_distxy_distx_disty2021-05-19 18:24:32/files/GNN_trainTERR_bdnetExtractor_distxy_distx_disty_best.pth.tar
+ROUNDING: False
+CUTTING: False
+DISJOINT: False
+PRETRAINED_GNN_MODEL:  /home/elg/Repositories/GNN-Cross-Camera-Association/results/train_terr_not_attacing_fc6_edgeupdate2021-04-24 21:12:44/files/train_terr_not_attacing_fc6_edgeupdate_best.pth.tar
+#  /home/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_trainTERR_bdnetMarket_xtractor_distxy_distx_disty2021-05-19 18:24:32/files/GNN_trainTERR_bdnetExtractor_distxy_distx_disty_best.pth.tar
 
 #  /home/elg/Repositories/GNN-cross-camera-association/results/GNN_trainTERR_osnet_mscd_app_dist_distx_disty2021-05-26 22:20:54/files/GNN_trainTERR_osnet_mscd_app_dist_distx_disty_best.pth.tar
 #  /home/elg/Repositories/GNN-cross-camera-association/results/GNN_trainTERR_osnetMarket_app_dist_distx_disty2021-05-25 11:29:58/files/GNN_trainTERR_osnetMarket_app_dist_distx_disty_best.pth.tar
@@ -12,7 +15,7 @@ PRETRAINED_GNN_MODEL:  /home/elg/Repositories/GNN-cross-camera-association/resul
 #  /home/elg/Repositories/GNN-cross-camera-association/results/GNN_trainTERR_bdnetExtractor_distxy_distx_disty2021-05-19 18:24:32/files/GNN_trainTERR_bdnetExtractor_distxy_distx_disty_best.pth.tar
 #/home/elg/Repositories/GNN-cross-camera-association/results/GNN_trainTERR_bdnetMarket_xtractor_distxy_distx_disty2021-05-19 18:24:32/files/GNN_trainTERR_bdnetExtractor_distxy_distx_disty_best.pth.tar
 
-#  /home/elg/Repositories/GNN-cross-camera-association/results/train_terr_not_attacing_fc6_edgeupdate2021-04-24 21:12:44/files/train_terr_not_attacing_fc6_edgeupdate_best.pth.tar
+#  /home/elg/Repositories/GNN-Cross-Camera-Association/results/train_terr_not_attacing_fc6_edgeupdate2021-04-24 21:12:44/files/train_terr_not_attacing_fc6_edgeupdate_best.pth.tar
 
 
 #FOR eval_RANK
@@ -68,7 +71,7 @@ TRAINING:
     ONLY_DIST: False
 
 CNN_MODEL:
-    arch: bdnet_market #resnet50 , bdnet_market, bdnet_cuhk, osnet_market, osnet_ms_c_d
+    arch: resnet50 #resnet50 , bdnet_market, bdnet_cuhk, osnet_market, osnet_ms_c_d
     model_weights_path:
         resnet50: ./trained_models/reid/resnet50_market_cuhk_duke.tar-232
         bdnet_market: ./trained_models/top-dropblock/de00143e-market-model.pth.tar-400
