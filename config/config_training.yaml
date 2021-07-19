@@ -1,13 +1,13 @@
-ID: prueba
-COMMENT: nodereid = embed reid  repetido dos veces
+ID: pruebaGNN_trainPETSyLab_resnet_app_dist_distx_disty_erase0.25
+COMMENT:  testing Terrace
 MODE: GNN
 
 #FOR GNN
 DATASET_TRAIN:
-    NAME: EPFL-Terrace
+    NAME: [EPFL-Terrace] # PETS2009_S2_L1
     ROOT: /home/elg/Datasets/
     N_CLASSES:
-    IMAUG: False
+    IMAUG: True
     RESIZE:
       resnet50: [128, 64]
       bdnet_market: [384, 128]
@@ -30,11 +30,18 @@ DATASET_VAL:
     STD: [0.229, 0.224, 0.225]
     ZERO_PADDING: False
 
+CONV_TO_M: # dist/CONV_TO_M to covert to meters
+  PETS2009_S2_L1_5_8: 26.56
+  EPFL-Laboratory: 44.23
+  EPFL-Terrace: 50.83
+
+
+
 
 TRAINING:
     BATCH_SIZE:
         TRAIN: 16
-        VAL: 1
+        VAL: 16
     EPOCHS: 100
     OPTIMIZER:
       type: Adam
@@ -51,7 +58,7 @@ TRAINING:
     ONLY_DIST: False
 
 CNN_MODEL:
-    arch: bdnet_market #resnet50 , bdnet_market, bdnet_cuhk, osnet_market, osnet_ms_c_d
+    arch: resnet50 #resnet50 , bdnet_market, bdnet_cuhk, osnet_market, osnet_ms_c_d
     model_weights_path:
         resnet50: ./trained_models/reid/resnet50_market_cuhk_duke.tar-232
         bdnet_market: ./trained_models/top-dropblock/de00143e-market-model.pth.tar-400

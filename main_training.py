@@ -28,7 +28,7 @@ import imgaug as ia
 from imgaug import augmenters as iaa
 
 from PIL import Image
-from torch.utils.data import DataLoader,Dataset
+from torch.utils.data import DataLoader,Dataset, ConcatDataset
 from torch_geometric.data import Data, Batch
 
 from datasets import datasets
@@ -108,12 +108,13 @@ def my_collate(batch):
 
     bboxes_batches = [item[0] for item in batch]
     df_batches = [item[1] for item in batch]
+    max_dist = [item[2] for item in batch]
     # frames_batches = [item[1] for item in batch]
     # ids_batches = [item[2] for item in batch]
     # ids_cam_batches  = [item[3] for item in batch]
     # bboxes, frames, ids, ids_cam
 
-    return [bboxes_batches, df_batches]#[bboxes_batches, frames_batches, ids_batches, ids_cam_batches]
+    return [bboxes_batches, df_batches,max_dist] #, path]#[bboxes_batches, frames_batches, ids_batches, ids_cam_batches]
 
 
 
@@ -144,24 +145,49 @@ os.mkdir(os.path.join(results_path, 'files'))
 
 cnn_model = load_model(CONFIG)
 
+train_datasets = []
 
-dataset_dir = os.path.join(CONFIG['DATASET_TRAIN']['ROOT'],CONFIG['DATASET_TRAIN']['NAME'])
-subset_train_dir = os.path.join(CONFIG['DATASET_TRAIN']['ROOT'],CONFIG['DATASET_TRAIN']['NAME'])
-subset_val_dir = os.path.join(CONFIG['DATASET_VAL']['ROOT'],CONFIG['DATASET_VAL']['NAME'])
+for d in CONFIG['DATASET_TRAIN']['NAME']:
+
+    dataset_dir = os.path.join(CONFIG['DATASET_TRAIN']['ROOT'],d)
+    # subset_train_dir = os.path.join(CONFIG['DATASET_TRAIN']['ROOT'],d)
+    subset_val_dir = os.path.join(CONFIG['DATASET_VAL']['ROOT'],d)
+    # train_set = torchvision.datasets.ImageFolder(subset_train_dir)
+    # val_set = torchvision.datasets.ImageFolder(subset_val_dir)
+    train_datasets.append(datasets.EPFL_dataset(d, 'train', CONFIG, cnn_model))
 
 
-train_set = torchvision.datasets.ImageFolder(subset_train_dir)
-val_set = torchvision.datasets.ImageFolder(subset_val_dir)
 
-train_dataset = datasets.EPFL_dataset(train_set, 'train', CONFIG, cnn_model)
-val_dataset = datasets.EPFL_dataset(val_set, 'validation', CONFIG, cnn_model)
+if len(train_datasets) > 1:
+    train_dataset = torch.utils.data.ConcatDataset(train_datasets)
+
+    total_samples = np.sum(np.asarray(train_dataset.cumulative_sizes))
+    weights = list([])
+    for t in train_datasets:
+        weights.append(np.ones(len(t)) * (1 / (len(t))))
+    weights = torch.from_numpy(np.asarray(np.concatenate(weights)))
+    sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'],
+                                                             replacement=False)
+
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'],
+                                               sampler=sampler,
+                                               num_workers=0, collate_fn=my_collate,
+                                               pin_memory=CONFIG['DATALOADER']['PIN_MEMORY'])
+
+
+
+else:
+    train_dataset = train_datasets[0]
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'],
+                                               shuffle=True,
+                                               num_workers=0, collate_fn=my_collate,
+                                               pin_memory=CONFIG['DATALOADER']['PIN_MEMORY'])
 
 # print("SHUFFLE FALSE")
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'], shuffle=True,
-                                           num_workers=CONFIG['DATALOADER']['NUM_WORKERS'], collate_fn=my_collate,pin_memory=CONFIG['DATALOADER']['PIN_MEMORY'])
 
+val_dataset = datasets.EPFL_dataset([], 'validation', CONFIG, cnn_model)
 validation_loader = torch.utils.data.DataLoader(val_dataset, batch_size=CONFIG['TRAINING']['BATCH_SIZE']['VAL'], shuffle=False,
-                                                num_workers=CONFIG['DATALOADER']['NUM_WORKERS'], collate_fn=my_collate,pin_memory=CONFIG['DATALOADER']['PIN_MEMORY'])
+                                               num_workers=CONFIG['DATALOADER']['NUM_WORKERS'], collate_fn=my_collate,pin_memory=CONFIG['DATALOADER']['PIN_MEMORY'])
 #LOAD MPN NETWORK#
 
 mpn_model = load_model_mpn(CONFIG)

@@ -1,39 +1,78 @@
+'''
+################################
+#    Pre-process EPFL data   #
+################################
+'''
 
 import os
+import cv2
 import time
-import shutil
-import yaml
-
-import matplotlib.pyplot as plt
 import numpy as np
-
-import torch
-import argparse
-import torch.nn as nn
-import torchvision
-import torchvision.transforms as transforms
-
-
-from models.resnet import resnet50_fc256, load_pretrained_weights
+import matplotlib.pyplot as plt
 
 
 
 
+def  process(data_path):
+    # Current root directory
 
 
-global USE_CUDA, CONFIG
-
-USE_CUDA = torch.cuda.is_available()
-
-parser = argparse.ArgumentParser(description='Training GNN for cross-camera association')
-parser.add_argument('--ConfigPath', metavar='DIR', help='Configuration file path')
-
-# Decode CONFIG file information
-args = parser.parse_args()
-CONFIG = yaml.safe_load(open(args.ConfigPath, 'r'))
+    # Original dataset directory
 
 
-cnn_model = load_model(CONFIG)
+    cameras = os.listdir(data_path)
+    for c in cameras:
 
-dataset_dir = os.path.join(CONFIG['DATASET_TRAIN']['ROOT'],CONFIG['DATASET_TRAIN']['NAME'])
+            tStart = time.time()
+            print('Processing ' + c)
+
+            # vdo_dir = os.path.join(data_path, c, c + '.avi')
+            vdo_dir = os.path.join(data_path, c, c + '.mp4')
+
+            video = cv2.VideoCapture(vdo_dir)
+
+            num_frames = video.get(cv2.CAP_PROP_FRAME_COUNT)
+            fps = video.get(cv2.CAP_PROP_FPS)
+            h = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            w = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
+
+            blank_image = np.zeros((h, w, 3), np.uint8)
+
+            output_dir = os.path.join(data_path, c, 'img1')
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+
+
+            frame_counter = 0
+
+            # Read video file and save image frames
+            while video.isOpened():
+
+                ret, frame = video.read()
+                frame_name = os.path.join(output_dir, str(frame_counter).zfill(6) + ".jpg")
+                frame_counter += 1
+
+                # print(video.get(cv2.CAP_PROP_POS_FRAMES))
+
+                if not ret:
+                    print("End of video file.")
+                    a = 1
+                    break
+                cv2.imwrite(frame_name, frame)
+
+
+
+
+            tEnd = time.time()
+            print("It cost %f sec" % (tEnd - tStart))
+
+
+if __name__ == '__main__':
+
+
+    data_path = '/home/elg/Datasets/CAMPUS_Garden1/'
+    process(data_path)
+
+
+
 

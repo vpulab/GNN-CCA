@@ -153,7 +153,7 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
             start_time = time.time()
 
             ########### Data extraction ###########
-            [bboxes, data_df] = data
+            [bboxes, data_df,max_dist] = data
 
             len_graphs = [len(item) for item in data_df]
             with torch.no_grad():
@@ -225,10 +225,13 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
                     points1 = np.concatenate((xws_1, yws_1), axis=1)
                     points2 = np.concatenate((xws_2, yws_2), axis=1)
 
+                    #Convert distances to meters
                     spatial_dist_g = torch.unsqueeze((torch.from_numpy(paired_distances(points1, points2))), dim=1).cuda()
+                    spatial_dist_g_norm = spatial_dist_g.cpu().numpy() / max_dist[g]
                     spatial_dist_x = torch.abs(torch.from_numpy(xws_1 - xws_2)).cuda()
+                    spatial_dist_x_norm = spatial_dist_x / max_dist[g]
                     spatial_dist_y = torch.abs(torch.from_numpy(yws_1 - yws_2)).cuda()
-
+                    spatial_dist_y_norm = spatial_dist_y / max_dist[g]
 
                     if CONFIG['TRAINING']['ONLY_APPEARANCE']:
                         edge_attr = torch.cat((emb_dist_g, node_dist_g, emb_dist_g_cos, node_dist_g_cos),   dim=1)
@@ -238,7 +241,7 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
                         edge_attr = torch.cat((spatial_dist_g.type(torch.float32), spatial_dist_x.type(torch.float32), spatial_dist_y.type(torch.float32)), dim=1)
 
                     else:
-                        edge_attr = torch.cat((spatial_dist_g.type(torch.float32), spatial_dist_x.type(torch.float32), spatial_dist_y.type(torch.float32), emb_dist_g), dim=1)
+                        edge_attr = torch.cat((spatial_dist_g_norm.type(torch.float32), spatial_dist_x_norm.type(torch.float32), spatial_dist_y_norm.type(torch.float32), emb_dist_g), dim=1)
                     # EDGE LABELS
 
                     edge_labels_g = torch.from_numpy(
@@ -288,35 +291,36 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
                 utils.visualize(G, color=data.y, edge_labels = edge_labels_np, edge_index = edge_ixs_np, node_label = node_id_cam_np )
 
                 # PLOT GROUNDPLANE DETECTIONS
-                frame = train_dataset.frames_valid[1175]
+                frame = data_df[0]['frame'].values[0]
 
                 # GET each camera view plane
 
+
+                # # CAM VIEW
+                # for id_cam in np.unique(data_df[0]['id_cam']):
+                #     # plt.fill(train_dataset.list_corners_x[id_cam], train_dataset.list_corners_y[id_cam], c=list_cam_colors[id_cam], alpha=0.2)
+                #
+                #     # TO SHOW THE FRAME WARPED
+                #     plt.figure()
+                #     homog_file = os.path.join(dataset_dir, train_dataset.cameras[id_cam], 'Homography.txt')
+                #     H = np.asarray(pd.read_csv(homog_file, header=None, sep="\t"))
+                #     frame_path = os.path.join(dataset_dir, train_dataset.cameras[id_cam], 'img1',
+                #                               str(frame).zfill(6) + '.jpg')
+                #     img = imread(frame_path)
+                #     dst = cv2.warpPerspective(img, H, (500, 500))
+                #     plt.imshow(dst)
+                #     plt.fill(train_dataset.list_corners_x[id_cam], train_dataset.list_corners_y[id_cam],
+                #              c=list_cam_colors[id_cam], alpha=0.2)
+                #     data_cam = data_df[0][data_df[0]['id_cam'] == id_cam]
+                #     xw_in_cam = np.asarray(data_cam['xw'])
+                #     yw_in_cam = np.asarray(data_cam['yw'])
+                #     plt.scatter(xw_in_cam, yw_in_cam, c=list_cam_colors[id_cam])
+                #     plt.show(block=False)
+                #     a = 1
+                #
                 plt.figure()
                 plt.title('Detections in frame ' + str(data_df[0]['frame'].values[0]))
                 list_legend = list()
-
-                # CAM VIEW
-                for id_cam in np.unique(data_df[0]['id_cam']):
-                    # plt.fill(train_dataset.list_corners_x[id_cam], train_dataset.list_corners_y[id_cam], c=list_cam_colors[id_cam], alpha=0.2)
-
-                    # TO SHOW THE FRAME WARPED
-                    plt.figure()
-                    homog_file = os.path.join(dataset_dir, train_dataset.cameras[id_cam], 'Homography.txt')
-                    H = np.asarray(pd.read_csv(homog_file, header=None, sep="\t"))
-                    frame_path = os.path.join(dataset_dir, train_dataset.cameras[id_cam], 'img1',
-                                              str(frame).zfill(6) + '.jpg')
-                    img = imread(frame_path)
-                    dst = cv2.warpPerspective(img, H, (500, 500))
-                    plt.imshow(dst)
-                    plt.fill(train_dataset.list_corners_x[id_cam], train_dataset.list_corners_y[id_cam],
-                             c=list_cam_colors[id_cam], alpha=0.2)
-                    data_cam = data_df[0][data_df[0]['id_cam'] == id_cam]
-                    xw_in_cam = np.asarray(data_cam['xw'])
-                    yw_in_cam = np.asarray(data_cam['yw'])
-                    plt.scatter(xw_in_cam, yw_in_cam, c=list_cam_colors[id_cam])
-                    plt.show()
-                    a = 1
 
                 # DETECTIONS POINT
                 for id_cam in np.unique(data_df[0]['id_cam']):
@@ -345,6 +349,9 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
             ########### Forward ###########
 
             outputs = mpn_model(data_batch)
+
+
+
 
             ########### Loss ###########
 
@@ -795,7 +802,7 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
     homogeneity = []
     completeness = []
     v_measure = []
-
+    tic = time.time()
     with torch.no_grad():
         for i, data in enumerate(val_loader):
             if i >= 0 :
@@ -803,7 +810,7 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
                 start_time = time.time()
 
                 ########### Data extraction ###########
-                [bboxes, data_df] = data
+                [bboxes, data_df,path] = data
 
                 len_graphs = [len(item) for item in data_df]
                 if CONFIG['CNN_MODEL']['arch'] == 'resnet50':
@@ -914,7 +921,7 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
                 preds_prob = sig(preds)
                 predictions = (preds_prob >= 0.5) * 1
 
-                if i==753:
+                if i==740:
                     a=1
 
 
@@ -924,31 +931,62 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
                 GT_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in enumerate(labels_edges_GT) if p == 1]
                 G_GT = nx.DiGraph(GT_active_edges)
                 ID_GT, n_clusters_GT = utils.compute_SCC_and_Clusters(G_GT,data_batch.num_nodes)
-                print('# Clusters GT : ' + str(n_clusters_GT))
-                print(ID_GT)
+                # print('# Clusters GT : ' + str(n_clusters_GT))
+                # print(ID_GT)
 
                 predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in enumerate(predictions) if p == 1]
                 G = nx.DiGraph(predicted_active_edges)
-                new_ID_pred, n_clusters_pred = utils.compute_SCC_and_Clusters(G,data_batch.num_nodes)
-                print('# Clusters:  ' + str(n_clusters_pred))
-                print(new_ID_pred)
+                ID_pred, n_clusters_pred = utils.compute_SCC_and_Clusters(G,data_batch.num_nodes)
+                # print('# Clusters:  ' + str(n_clusters_pred))
+                # print(ID_pred)
+
 
                 if CONFIG['CUTTING']:
                     predictions, predicted_active_edges = utils.remove_edges_single_direction(predicted_active_edges,
                                                                                      predictions, edge_list)
                     G = nx.DiGraph(predicted_active_edges)
-                    new_ID_pred, n_clusters_pred = utils.compute_SCC_and_Clusters(G, data_batch.num_nodes)
-                    print('# Clusters CUT:  ' + str(n_clusters_pred))
-                    print(new_ID_pred)
+                    ID_pred, n_clusters_pred = utils.compute_SCC_and_Clusters(G, data_batch.num_nodes)
+                    # print('# Clusters CUT:  ' + str(n_clusters_pred))
+                    # print(ID_pred)
+
+
+
 
 
                 # # COMPUTE GREEDY ROUNDING
                 if CONFIG['ROUNDING']:
-                    new_predictions = utils.compute_rounding(data_batch, predictions.view(-1), preds_prob)
+                    predictions_r = utils.compute_rounding(data_batch, predictions.view(-1), preds_prob,predicted_active_edges)
+                    if predictions_r != []:
+                        predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in
+                                                      enumerate(predictions_r) if p == 1]
+                        predictions = predictions_r
 
-                else:
-                    new_predictions = []
+                    else:
+                        predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in
+                                                      enumerate(predictions) if p == 1]
 
+
+                    G = nx.DiGraph(predicted_active_edges)
+                    ID_pred, rounding_n_clusters_pred = utils.compute_SCC_and_Clusters(G, data_batch.num_nodes)
+                    # print('# Clusters with rounding:  ' + str(rounding_n_clusters_pred))
+                    # print(ID_pred)
+
+                if CONFIG['CUTTING']:
+                    predictions, predicted_active_edges = utils.remove_edges_single_direction(predicted_active_edges,
+                                                                                              predictions, edge_list)
+                    G = nx.DiGraph(predicted_active_edges)
+                    ID_pred, n_clusters_pred = utils.compute_SCC_and_Clusters(G, data_batch.num_nodes)
+                    # print('# Clusters CUT:  ' + str(n_clusters_pred))
+                    # print(ID_pred)
+                if CONFIG['DISJOINT']:
+                    predictions = utils.disjoint_big_clusters(ID_pred, predictions, preds_prob, edge_list,
+                                                              data_batch, predicted_active_edges, G)
+                    predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in
+                                              enumerate(predictions) if p == 1]
+                    G = nx.DiGraph(predicted_active_edges)
+                    ID_pred, disjoint_n_clusters_pred = utils.compute_SCC_and_Clusters(G, data_batch.num_nodes)
+                    # print('# Clusters with disjoint:  ' + str(disjoint_n_clusters_pred))
+                    # print(ID_pred)
 
                 # label_ID_to_disjoint = np.where(np.bincount(ID_pred) > 4)
                 # if len(label_ID_to_disjoint) > 1:
@@ -960,44 +998,18 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
                 # G_undirected = nx.to_undirected(H2)
                 # edges_bridges = [c for c in nx.bridges(G_undirected)]
 
-
-                if new_predictions != []:
-                    new_predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in
-                                              enumerate(new_predictions) if p == 1]
-
-                    rounding_G = nx.DiGraph(new_predicted_active_edges)
-                    new_ID_pred,rounding_n_clusters_pred = utils.compute_SCC_and_Clusters(rounding_G, data_batch.num_nodes)
-                    print('# Clusters with rounding:  ' + str(rounding_n_clusters_pred))
-                    print(new_ID_pred)
-
-                else:
-                    new_ID_pred = new_ID_pred
-                    new_predictions = predictions
-                    new_predicted_active_edges = predicted_active_edges
-
-                if CONFIG['DISJOINT']:
-                    new_predictions = utils.disjoint_big_clusters(new_ID_pred, new_predictions, preds_prob, edge_list, data_batch,new_predicted_active_edges)
-                    new_predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in
-                                                  enumerate(new_predictions) if p == 1]
-                    disjoint_G = nx.DiGraph(new_predicted_active_edges)
-                    new_ID_pred, disjoint_n_clusters_pred = utils.compute_SCC_and_Clusters(disjoint_G,
-                                                                                                data_batch.num_nodes)
-                    print('# Clusters with disjoint:  ' + str(disjoint_n_clusters_pred))
-                    print(new_ID_pred)
-
-
                 # rand_index_rounding.append(metrics.adjusted_rand_score(ID_GT, rounding_ID_pred))
-                rand_index.append(metrics.adjusted_rand_score(ID_GT, new_ID_pred))
+                rand_index.append(metrics.adjusted_rand_score(ID_GT, ID_pred))
 
 
-                TP, FP, TN, FN, P, R, FS = compute_P_R_F(new_predictions.cpu().numpy(), labels_edges_GT)
+                TP, FP, TN, FN, P, R, FS = compute_P_R_F(predictions.cpu().numpy(), labels_edges_GT)
 
                 # TP_r, FP_r, TN_r, FN_r, P_r, R_r, FS_r = compute_P_R_F(new_predictions.cpu().numpy(), labels_edges_GT)
                 # rand_index.append(metrics.adjusted_rand_score(ID_GT, ID_pred))
-                mutual_index.append(metrics.adjusted_mutual_info_score(ID_GT, new_ID_pred))
-                homogeneity.append(metrics.homogeneity_score(ID_GT, new_ID_pred))
-                completeness.append(metrics.completeness_score(ID_GT, new_ID_pred))
-                v_measure.append(metrics.v_measure_score(ID_GT, new_ID_pred))
+                mutual_index.append(metrics.adjusted_mutual_info_score(ID_GT, ID_pred))
+                homogeneity.append(metrics.homogeneity_score(ID_GT, ID_pred))
+                completeness.append(metrics.completeness_score(ID_GT, ID_pred))
+                v_measure.append(metrics.v_measure_score(ID_GT, ID_pred))
 
 
 
@@ -1025,7 +1037,9 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
                                               et=str(datetime.timedelta(seconds=int(val_batch_time.sum))),
                                               eta=str(datetime.timedelta(seconds=int(val_batch_time.avg * (len(val_loader) - i))))))
 
+    toc = time.time()
 
+    print(['with bridges  eval lab elapsed time ' + str(toc-tic)])
     return P_list, R_list, F_list, TP_list, FP_list, FN_list, TN_list, rand_index,mutual_index, homogeneity, completeness, v_measure
 
 
@@ -1501,3 +1515,73 @@ def geometrical_association(CONFIG, val_loader):
            F_r_list, TP_r_list, FP_r_list, FN_r_list, TN_r_list,mutual_index, homogeneity, completeness, v_measure, \
            fowlkes_index
 
+
+
+
+# # CODIGO PINTAS DIST Y IST NORM (va en el bucle)
+
+# spatial_dist_g = torch.unsqueeze((torch.from_numpy(paired_distances(points1, points2))), dim=1).cuda()
+#                 spatial_dist_g_l.append(spatial_dist_g.cpu().numpy())
+#                 spatial_dist_g_norm.append(spatial_dist_g.cpu().numpy() / max_dist[g])
+#                 spatial_dist_x = torch.abs(torch.from_numpy(xws_1 - xws_2)).cuda()
+#                 spatial_dist_x_norm = spatial_dist_x / max_dist[g]
+#                 spatial_dist_y = torch.abs(torch.from_numpy(yws_1 - yws_2)).cuda()
+#                 spatial_dist_y_norm = spatial_dist_y / max_dist[g]
+# #
+# edge_labels_g = torch.from_numpy(
+#     np.asarray([1 if (data_df[g]['id'].values[data_df[g]['node'].values == edge_ixs_g_np[0][i]] ==
+#                       data_df[g]['id'].values[data_df[g]['node'].values == edge_ixs_g_np[1][i]]) else 0
+#                 for i in range(edge_ixs_g_np.shape[1])])).type(torch.float).cuda()
+# if max_dist[g] == 26.56:  # PETS
+#     pets_dists.append(
+#         [n for pos, n in enumerate(spatial_dist_g.cpu().numpy()) if edge_labels_g.cpu().numpy()[pos] == 1])
+#     pets_dists_norm.append([n / max_dist[g] for pos, n in enumerate(spatial_dist_g.cpu().numpy()) if
+#                             edge_labels_g.cpu().numpy()[pos] == 1])
+# elif max_dist[g] == 50.83:  # Terrace
+#     terrace_dists.append([n for pos, n in enumerate(spatial_dist_g.cpu().numpy()) if
+#                           edge_labels_g.cpu().numpy()[pos] == 1])
+#     terrace_dists_norm.append([n / max_dist[g] for pos, n in enumerate(spatial_dist_g.cpu().numpy()) if
+#                                edge_labels_g.cpu().numpy()[pos] == 1])
+# elif max_dist[g] == 44.23:  # Laboratory
+#     lab_dists.append([n for pos, n in enumerate(spatial_dist_g.cpu().numpy()) if
+#                       edge_labels_g.cpu().numpy()[pos] == 1])
+#     lab_dists_norm.append([n / max_dist[g] for pos, n in enumerate(spatial_dist_g.cpu().numpy()) if
+#                            edge_labels_g.cpu().numpy()[pos] == 1])
+#
+# # CODIGO PINTAR DISTSN desopues de forwards
+# dists = np.concatenate(spatial_dist_g_l)
+# dists_norm = np.concatenate(spatial_dist_g_norm)
+#
+# pets_dists = np.concatenate(pets_dists)
+# pets_dists_norm = np.concatenate(pets_dists_norm)
+# terrace_dists = np.concatenate(terrace_dists)
+# terrace_dists_norm = np.concatenate(terrace_dists_norm)
+# lab_dists = np.concatenate(lab_dists)
+# lab_dists_norm = np.concatenate(lab_dists_norm)
+# pets_dists_mean = np.mean(pets_dists)
+# pets_dists_norm_mean = np.mean(pets_dists_norm)
+# terrace_dists_mean = np.mean(terrace_dists)
+# terrace_dists_norm_mean = np.mean(terrace_dists_norm)
+# lab_dists_norm_mean = np.mean(lab_dists_norm)
+# lab_dists_mean = np.mean(lab_dists)
+#
+# plt.figure()
+# plt.subplot(2, 1, 1)
+# plt.scatter(np.arange(len(dists)), dists, c=data_batch.edge_labels.cpu().numpy())
+# plt.plot(np.arange(len(dists)), np.ones(len(dists)) * terrace_dists_mean)
+# plt.plot(np.arange(len(dists)), np.ones(len(dists)) * pets_dists_mean)
+# plt.plot(np.arange(len(dists)), np.ones(len(dists)) * lab_dists_mean)
+#
+# plt.title('Distances. Mean(1) terrace = ' + str(int(terrace_dists_mean)) + ' Mean(1) pets = ' + str(
+#     int(pets_dists_mean)) + 'Mean(1) Lab = ' + str(int(lab_dists_mean)))
+# plt.show(block=False)
+# plt.subplot(2, 1, 2)
+# plt.scatter(np.arange(len(dists_norm)), dists_norm, c=data_batch.edge_labels.cpu().numpy())
+# plt.plot(np.arange(len(dists)), np.ones(len(dists)) * terrace_dists_norm_mean)
+# plt.plot(np.arange(len(dists)), np.ones(len(dists)) * pets_dists_norm_mean)
+# plt.plot(np.arange(len(dists)), np.ones(len(dists)) * lab_dists_norm_mean)
+#
+# plt.title('Distances in meters. Mean(1) terrace = ' + str((terrace_dists_norm_mean)) + ' Mean(1) pets = ' + str(
+#     pets_dists_norm_mean) + 'Mean(1) Lab = ' + str(lab_dists_norm_mean))
+#
+# plt.show(block=False)

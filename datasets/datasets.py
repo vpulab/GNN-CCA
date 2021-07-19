@@ -21,9 +21,9 @@ COL_NAMES_EPFL = ('id', 'xmin', 'ymin', 'xmax', 'ymax', 'frame', 'lost', 'occlud
 # noinspection PyTypeChecker
 class EPFL_dataset(Dataset):
 
-    def __init__(self, imageFolderDataset, mode, CONFIG, cnn_model):
+    def __init__(self, name, mode, CONFIG, cnn_model):
 
-        self.imageFolderDataset = imageFolderDataset
+        # self.imageFolderDataset = imageFolderDataset
         self.mode = mode
         self.cnn_model = cnn_model
 
@@ -40,10 +40,11 @@ class EPFL_dataset(Dataset):
         if mode == 'train':
 
             self.transform = self.transform_tr
-            self.path = os.path.join(CONFIG['DATASET_TRAIN']['ROOT'],CONFIG['DATASET_TRAIN']['NAME'])
+            self.path = os.path.join(CONFIG['DATASET_TRAIN']['ROOT'],name)
+            self.max_dist = CONFIG['CONV_TO_M'][name]
 
 
-            self.cameras = os.listdir(os.path.join(CONFIG['DATASET_TRAIN']['ROOT'],CONFIG['DATASET_TRAIN']['NAME']))
+            self.cameras = os.listdir(os.path.join(CONFIG['DATASET_TRAIN']['ROOT'],name))
             self.cameras = [item for item in self.cameras if item[0] is not '.']
             self.cameras.sort()
             self.num_cameras = len(self.cameras)
@@ -53,9 +54,11 @@ class EPFL_dataset(Dataset):
             self.list_corners_y = list()
 
             x_corners = np.array([0, 360, 360, 0])
-            y_corners = np.array([50, 50, 288, 288])
+            y_corners = np.array([100, 100, 288, 288])
+            # x_corners = np.array([360, 360, 0,0])
+            # y_corners = np.array([50, 288, 288,50])
             for c in self.cameras:
-                seq_path = os.path.join(os.path.join(CONFIG['DATASET_TRAIN']['ROOT'],CONFIG['DATASET_TRAIN']['NAME'],c))
+                seq_path = os.path.join(os.path.join(CONFIG['DATASET_TRAIN']['ROOT'],name,c))
                 detections_file_path = os.path.join(seq_path, 'gt', 'gt.txt')
                 det_df = pd.read_csv(detections_file_path, header=None, sep=" ")
 
@@ -83,8 +86,8 @@ class EPFL_dataset(Dataset):
                 det_df['yw'] = yw
 
                 xw_corners, yw_corners = utils.apply_homography_image_to_world(x_corners, y_corners, H)
-                # corners = np.concatenate((np.expand_dims(x_corners,axis=1),np.expand_dims(y_corners,axis= 1)), axis=1)
-                # outputCorners = cv2.perspectiveTransform(corners[None,:,:].astype(float), H)
+                corners = np.concatenate((np.expand_dims(x_corners,axis=1),np.expand_dims(y_corners,axis= 1)), axis=1)
+                self.outputCorners = cv2.perspectiveTransform(corners[None,:,:].astype(float), H)
 
                 self.list_corners_x.append(xw_corners)
                 self.list_corners_y.append(yw_corners)
@@ -160,7 +163,12 @@ class EPFL_dataset(Dataset):
 
 
     def __getitem__(self, index):
-        # print('index = ' + str(index ))
+        print('index = ' + str(index))
+        print('dataset = ' + str(self.path))
+
+        if index>= len(self.frames_valid):
+            a = 1
+
         frame = self.frames_valid[index]
         data_f = self.data_det[self.data_det['frame'] == frame]
         cams = np.unique(data_f['id_cam'].values)
@@ -194,7 +202,7 @@ class EPFL_dataset(Dataset):
 
 
             bboxes.append(bb_img)
-            # frames.append(frame)
+            frames.append(self.path)
             # ids.append(det['id'])
             # ids_cam.append(det['id_cam'])
 
@@ -205,7 +213,7 @@ class EPFL_dataset(Dataset):
 
 
 
-        return [bboxes, data_f]#[bboxes, frames, ids, ids_cam]
+        return [bboxes, data_f,self.max_dist]#[bboxes, frames, ids, ids_cam]
 
 
 

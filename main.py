@@ -109,7 +109,7 @@ def my_collate(batch):
     bboxes_batches = [item[0] for item in batch]
     df_batches = [item[1] for item in batch]
     # frames_batches = [item[1] for item in batch]
-    # ids_batches = [item[2] for item in batch]
+    # path = [item[2] for item in batch]
     # ids_cam_batches  = [item[3] for item in batch]
     # bboxes, frames, ids, ids_cam
 
@@ -149,11 +149,11 @@ subset_train_dir = os.path.join(CONFIG['DATASET_TRAIN']['ROOT'],CONFIG['DATASET_
 subset_val_dir = os.path.join(CONFIG['DATASET_VAL']['ROOT'],CONFIG['DATASET_VAL']['NAME'])
 
 
-train_set = torchvision.datasets.ImageFolder(subset_train_dir)
-val_set = torchvision.datasets.ImageFolder(subset_val_dir)
+# train_set = torchvision.datasets.ImageFolder(subset_train_dir)
+# val_set = torchvision.datasets.ImageFolder(subset_val_dir)
 
-train_dataset = datasets.EPFL_dataset(train_set, 'train', CONFIG, cnn_model)
-val_dataset = datasets.EPFL_dataset(val_set, 'validation', CONFIG, cnn_model)
+train_dataset = datasets.EPFL_dataset(CONFIG['DATASET_TRAIN']['NAME'], 'train', CONFIG, cnn_model)
+val_dataset = datasets.EPFL_dataset([], 'validation', CONFIG, cnn_model)
 
 # print("SHUFFLE FALSE")
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'], shuffle=False,

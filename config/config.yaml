@@ -3,10 +3,14 @@ COMMENT: nodereid = embed reid  repetido dos veces
 MODE: GNN_eval #GNN, REID, GNN_eval, eval_RANK, REID_th
 
 #FOR GNN EVAL
-ROUNDING: False
-CUTTING: False
-DISJOINT: False
-PRETRAINED_GNN_MODEL:  /home/elg/Repositories/GNN-Cross-Camera-Association/results/train_terr_not_attacing_fc6_edgeupdate2021-04-24 21:12:44/files/train_terr_not_attacing_fc6_edgeupdate_best.pth.tar
+ROUNDING: True
+CUTTING: True
+DISJOINT: True
+PRETRAINED_GNN_MODEL: /home/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_trainPETSyTerrace_resnet_app_dist_distx_disty_erase0.252021-07-09 10:42:28/files/GNN_trainPETSyTerrace_resnet_app_dist_distx_disty_erase0.25_best.pth.tar
+
+#  /home/elg/Repositories/GNN-Cross-Camera-Association/results/train_terr_not_attacing_fc6_edgeupdate2021-04-24 21:12:44/files/train_terr_not_attacing_fc6_edgeupdate_best.pth.tar
+#  /home/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_trainPETSyTerrace_resnet_app_dist_distx_disty_erase0.252021-07-09 10:42:28/files/GNN_trainPETSyTerrace_resnet_app_dist_distx_disty_erase0.25_best.pth.tar
+#  /home/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_trainLAByTerrace_resnet_app_dist_distx_disty_erase0.252021-07-08 15:48:49/files/GNN_trainLAByTerrace_resnet_app_dist_distx_disty_erase0.25_best.pth.tar
 #  /home/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_trainTERR_bdnetMarket_xtractor_distxy_distx_disty2021-05-19 18:24:32/files/GNN_trainTERR_bdnetExtractor_distxy_distx_disty_best.pth.tar
 
 #  /home/elg/Repositories/GNN-cross-camera-association/results/GNN_trainTERR_osnet_mscd_app_dist_distx_disty2021-05-26 22:20:54/files/GNN_trainTERR_osnet_mscd_app_dist_distx_disty_best.pth.tar
