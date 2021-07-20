@@ -1,5 +1,5 @@
-ID: pruebaGNN_trainPETSyLab_resnet_app_dist_distx_disty_erase0.25
-COMMENT:  testing Terrace
+ID: GNN_trainTerrace_testLab_Resnet50MCD_vanilla_
+COMMENT: repeat  training, added  normalization of distances to meters
 MODE: GNN
 
 #FOR GNN
@@ -7,7 +7,7 @@ DATASET_TRAIN:
     NAME: [EPFL-Terrace] # PETS2009_S2_L1
     ROOT: /home/elg/Datasets/
     N_CLASSES:
-    IMAUG: True
+    IMAUG: False
     RESIZE:
       resnet50: [128, 64]
       bdnet_market: [384, 128]
@@ -34,8 +34,6 @@ CONV_TO_M: # dist/CONV_TO_M to covert to meters
   PETS2009_S2_L1_5_8: 26.56
   EPFL-Laboratory: 44.23
   EPFL-Terrace: 50.83
-
-
 
 
 TRAINING:

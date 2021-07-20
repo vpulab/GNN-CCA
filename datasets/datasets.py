@@ -102,6 +102,7 @@ class EPFL_dataset(Dataset):
         else: #VALIDATION
             self.path = os.path.join(CONFIG['DATASET_VAL']['ROOT'], CONFIG['DATASET_VAL']['NAME'])
 
+            self.max_dist = CONFIG['CONV_TO_M'][CONFIG['DATASET_VAL']['NAME']]
 
             self.transform = self.transform_te
             if CONFIG['MODE'] == 'TOP_DB_eval':
@@ -163,11 +164,11 @@ class EPFL_dataset(Dataset):
 
 
     def __getitem__(self, index):
-        print('index = ' + str(index))
-        print('dataset = ' + str(self.path))
-
-        if index>= len(self.frames_valid):
-            a = 1
+        # print('index = ' + str(index))
+        # print('dataset = ' + str(self.path))
+        #
+        # if index>= len(self.frames_valid):
+        #     a = 1
 
         frame = self.frames_valid[index]
         data_f = self.data_det[self.data_det['frame'] == frame]

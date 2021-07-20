@@ -180,7 +180,7 @@ else:
     train_dataset = train_datasets[0]
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'],
                                                shuffle=True,
-                                               num_workers=0, collate_fn=my_collate,
+                                               num_workers=CONFIG['DATALOADER']['NUM_WORKERS'], collate_fn=my_collate,
                                                pin_memory=CONFIG['DATALOADER']['PIN_MEMORY'])
 
 # print("SHUFFLE FALSE")
@@ -222,9 +222,10 @@ val_prec1_in_history = []
 
 ## TRAINING
 best_prec = 0
-
+list_lr = list([])
 for epoch in range(0, CONFIG['TRAINING']['EPOCHS']):
     epoch_start = time.time()
+    list_lr.append(optimizer.param_groups[0]['lr'])
 
     train_losses,train_precision_1, train_precision_0,train_loss_in_history, train_prec1_in_history,train_prec0_in_history,train_prec_in_history = \
         train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_path,train_loss_in_history,train_prec1_in_history,train_prec0_in_history,train_prec_in_history,train_dataset,dataset_dir)
@@ -258,6 +259,15 @@ for epoch in range(0, CONFIG['TRAINING']['EPOCHS']):
     plt.legend()
     plt.savefig(results_path + '/images/Loss per Epoch.pdf', bbox_inches='tight')
     plt.close()
+
+
+    plt.figure()
+    plt.plot(list_lr, 'r', label='Training')
+    plt.ylabel('Learning Rate'), plt.xlabel('Epoch')
+    plt.legend()
+    plt.savefig(results_path + '/images/LR per Epoch.pdf', bbox_inches='tight')
+    plt.close()
+
 
 
     is_best = (val_precision_1.avg + val_precision_0.avg)/2 > best_prec

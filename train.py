@@ -214,7 +214,6 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
                     emb_dist_g_cos = F.cosine_similarity(reid_embeds[edge_ixs_g[0]], reid_embeds[edge_ixs_g[1]]).view(-1, 1)
                     node_dist_g_cos = F.cosine_similarity(node_embeds[edge_ixs_g[0]], node_embeds[edge_ixs_g[1]]).view(-1, 1)
 
-
                     # coordinates of each pair of points
 
                     xws_1 = np.expand_dims(np.asarray([data_df[g]['xw'].values[item-prev_max_counter] for item in edge_ixs_g_np[0]]), axis = 1)
@@ -227,11 +226,11 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
 
                     #Convert distances to meters
                     spatial_dist_g = torch.unsqueeze((torch.from_numpy(paired_distances(points1, points2))), dim=1).cuda()
-                    spatial_dist_g_norm = spatial_dist_g.cpu().numpy() / max_dist[g]
+                    spatial_dist_g_norm = torch.from_numpy(spatial_dist_g.cpu().numpy() / max_dist[g]).cuda()
                     spatial_dist_x = torch.abs(torch.from_numpy(xws_1 - xws_2)).cuda()
-                    spatial_dist_x_norm = spatial_dist_x / max_dist[g]
+                    spatial_dist_x_norm = (spatial_dist_x / max_dist[g])
                     spatial_dist_y = torch.abs(torch.from_numpy(yws_1 - yws_2)).cuda()
-                    spatial_dist_y_norm = spatial_dist_y / max_dist[g]
+                    spatial_dist_y_norm = (spatial_dist_y / max_dist[g]).cuda()
 
                     if CONFIG['TRAINING']['ONLY_APPEARANCE']:
                         edge_attr = torch.cat((emb_dist_g, node_dist_g, emb_dist_g_cos, node_dist_g_cos),   dim=1)
@@ -429,7 +428,7 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
                 start_time = time.time()
 
                 ########### Data extraction ###########
-                [bboxes, data_df] = data
+                [bboxes, data_df,max_dist] = data
 
                 len_graphs = [len(item) for item in data_df]
                 if CONFIG['CNN_MODEL']['arch'] == 'resnet50':
@@ -506,10 +505,14 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
                         points1 = np.concatenate((xws_1, yws_1), axis=1)
                         points2 = np.concatenate((xws_2, yws_2), axis=1)
 
+                        # Convert distances to meters
                         spatial_dist_g = torch.unsqueeze((torch.from_numpy(paired_distances(points1, points2))),
                                                          dim=1).cuda()
+                        spatial_dist_g_norm = torch.from_numpy(spatial_dist_g.cpu().numpy() / max_dist[g]).cuda()
                         spatial_dist_x = torch.abs(torch.from_numpy(xws_1 - xws_2)).cuda()
+                        spatial_dist_x_norm = (spatial_dist_x / max_dist[g])
                         spatial_dist_y = torch.abs(torch.from_numpy(yws_1 - yws_2)).cuda()
+                        spatial_dist_y_norm = (spatial_dist_y / max_dist[g]).cuda()
 
                         if CONFIG['TRAINING']['ONLY_APPEARANCE']:
                             edge_attr = torch.cat((emb_dist_g, node_dist_g, emb_dist_g_cos, node_dist_g_cos), dim=1)
@@ -521,9 +524,9 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
                                                    spatial_dist_y.type(torch.float32)), dim=1)
 
                         else:
-                            edge_attr = torch.cat((spatial_dist_g.type(torch.float32),
-                                                   spatial_dist_x.type(torch.float32),
-                                                   spatial_dist_y.type(torch.float32), emb_dist_g), dim=1)
+                            edge_attr = torch.cat((spatial_dist_g_norm.type(torch.float32),
+                                                   spatial_dist_x_norm.type(torch.float32),
+                                                   spatial_dist_y_norm.type(torch.float32), emb_dist_g), dim=1)
 
                         # EDGE LABELS
 
