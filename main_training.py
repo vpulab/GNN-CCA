@@ -136,12 +136,24 @@ parser.add_argument('--ConfigPath', metavar='DIR', help='Configuration file path
 # Decode CONFIG file information
 args = parser.parse_args()
 CONFIG = yaml.safe_load(open(args.ConfigPath, 'r'))
-results_path = os.path.join(os.getcwd(), 'results', str(CONFIG['ID']) + date)
+if CONFIG['TRAINING']['ONLY_DIST'] or CONFIG['TRAINING']['ONLY_APPEARANCE']:
+    CONFIG['GRAPH_NET_PARAMS']['encoder_feats_dict']['edges']['edge_in_dim'] = 2
+    CONFIG['GRAPH_NET_PARAMS']['encoder_feats_dict']['edges']['edge_out_dim'] = 4
+    CONFIG['GRAPH_NET_PARAMS']['edge_model_feats_dict']['fc_dims'] = [4]
+    CONFIG['GRAPH_NET_PARAMS']['classifier_feats_dict']['edge_in_dim'] = 4
+    CONFIG['GRAPH_NET_PARAMS']['classifier_feats_dict']['edge_fc_dims'] = [2]
 
+
+results_path = os.path.join(os.getcwd(), 'results', str(CONFIG['ID']) + date)
 os.mkdir(results_path)
 os.mkdir(os.path.join(results_path, 'images'))
 os.mkdir(os.path.join(results_path, 'files'))
 
+with open(os.path.join(results_path, 'files', 'config.yaml'), 'w') as file:
+    yaml.safe_dump(CONFIG, file)
+
+shutil.copyfile('train.py', os.path.join(results_path, 'train.py'))
+shutil.copyfile('main_training.py', os.path.join(results_path, 'main_training.py'))
 
 cnn_model = load_model(CONFIG)
 
@@ -166,12 +178,12 @@ if len(train_datasets) > 1:
     for t in train_datasets:
         weights.append(np.ones(len(t)) * (1 / (len(t))))
     weights = torch.from_numpy(np.asarray(np.concatenate(weights)))
-    sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'],
+    sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, len(weights),
                                                              replacement=False)
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'],
                                                sampler=sampler,
-                                               num_workers=0, collate_fn=my_collate,
+                                               num_workers=CONFIG['DATALOADER']['NUM_WORKERS'],collate_fn=my_collate,
                                                pin_memory=CONFIG['DATALOADER']['PIN_MEMORY'])
 
 
@@ -190,14 +202,47 @@ validation_loader = torch.utils.data.DataLoader(val_dataset, batch_size=CONFIG['
                                                num_workers=CONFIG['DATALOADER']['NUM_WORKERS'], collate_fn=my_collate,pin_memory=CONFIG['DATALOADER']['PIN_MEMORY'])
 #LOAD MPN NETWORK#
 
-mpn_model = load_model_mpn(CONFIG)
+mpn_model = load_model_mpn(CONFIG,CONFIG['PRETRAINED_GNN_MODEL'])
 mpn_model.cuda()
 num_params_mpn  = sum([np.prod(p.size()) for p in mpn_model.parameters()])
 
 ## LOSS AND OPTIMIZER
 
-# optim_class = CONFIG['TRAINING']['OPTIMIZER']['type']
-optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, mpn_model.parameters()), lr=CONFIG['TRAINING']['OPTIMIZER']['args']['lr'])
+
+
+if CONFIG['TRAINING']['OPTIMIZER']['type']  == 'Adam':
+    if CONFIG['TRAINING']['WARMUP']['ENABLE']:
+        lr_warmup_list = np.linspace(CONFIG['TRAINING']['WARMUP']['LR'], CONFIG['TRAINING']['OPTIMIZER']['args']['lr'],
+                                     CONFIG['TRAINING']['WARMUP']['NUM_EPOCHS'] + 1, endpoint=False)
+        lr_warmup_list = lr_warmup_list[1:]
+
+        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, mpn_model.parameters()),
+                                    lr_warmup_list[0])
+        flag_warmup_ended = False
+    else:
+        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, mpn_model.parameters()), lr=CONFIG['TRAINING']['OPTIMIZER']['args']['lr'])
+
+elif CONFIG['TRAINING']['OPTIMIZER']['type']  == 'SGD':
+    if CONFIG['TRAINING']['WARMUP']['ENABLE']:
+        lr_warmup_list = np.linspace(CONFIG['TRAINING']['WARMUP']['LR'], CONFIG['TRAINING']['OPTIMIZER']['args']['lr'],
+                                     CONFIG['TRAINING']['WARMUP']['NUM_EPOCHS'] + 1, endpoint=False)
+        lr_warmup_list = lr_warmup_list[1:]
+
+        optimizer = torch.optim.SGD(mpn_model.parameters(),
+                                    lr= lr_warmup_list[0],
+                                    momentum=CONFIG['TRAINING']['OPTIMIZER']['args']['momentum'],
+                                    weight_decay=CONFIG['TRAINING']['OPTIMIZER']['args']['weight_decay'])
+        flag_warmup_ended = False
+    else:
+        optimizer = torch.optim.SGD(mpn_model.parameters(),
+                                    lr =CONFIG['TRAINING']['OPTIMIZER']['args']['lr'],
+                                    momentum=CONFIG['TRAINING']['OPTIMIZER']['args']['momentum'],
+                                    weight_decay=CONFIG['TRAINING']['OPTIMIZER']['args']['weight_decay'])
+
+    # Learning rate decay
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = CONFIG['TRAINING']['LR_SCHEDULER']['args']['step_size'],
+                                                gamma = CONFIG['TRAINING']['LR_SCHEDULER']['args']['gamma'])
+
 
 # avg per epoch
 training_loss_avg = []
@@ -222,7 +267,9 @@ val_prec1_in_history = []
 
 ## TRAINING
 best_prec = 0
+best_val_loss = 1000
 list_lr = list([])
+
 for epoch in range(0, CONFIG['TRAINING']['EPOCHS']):
     epoch_start = time.time()
     list_lr.append(optimizer.param_groups[0]['lr'])
@@ -240,6 +287,27 @@ for epoch in range(0, CONFIG['TRAINING']['EPOCHS']):
     val_loss_avg.append(val_losses.avg)
     val_precision_1_avg.append(val_precision_1.avg)
     val_precision_0_avg.append(val_precision_0.avg)
+
+
+
+    if CONFIG['TRAINING']['WARMUP']['ENABLE'] and not (flag_warmup_ended):
+        if epoch == CONFIG['TRAINING']['WARMUP']['NUM_EPOCHS']:
+            flag_warmup_ended = True
+
+        if (flag_warmup_ended):
+            # optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, mpn_model.parameters()), lr=CONFIG['TRAINING']['OPTIMIZER']['args']['lr'])
+            optimizer = torch.optim.SGD(mpn_model.parameters(),
+                                        lr=CONFIG['TRAINING']['OPTIMIZER']['args']['lr'],
+                                        momentum=CONFIG['TRAINING']['OPTIMIZER']['args']['momentum'],
+                                        weight_decay=CONFIG['TRAINING']['OPTIMIZER']['args']['weight_decay'])
+            # Learning rate decay SGD
+            scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=CONFIG['TRAINING']['LR_SCHEDULER']['args'][ 'step_size'], gamma=CONFIG['TRAINING']['LR_SCHEDULER']['args']['gamma'])
+        else:
+            optimizer.param_groups[0]['lr'] = lr_warmup_list[epoch]
+
+    else:
+        if CONFIG['TRAINING']['OPTIMIZER']['type'] == 'SGD':
+            scheduler.step()
 
     plt.figure()
     plt.plot(training_precision_1_avg, label='Training Prec class 1')
@@ -270,14 +338,20 @@ for epoch in range(0, CONFIG['TRAINING']['EPOCHS']):
 
 
 
-    is_best = (val_precision_1.avg + val_precision_0.avg)/2 > best_prec
-    best_prec = max((val_precision_1.avg + val_precision_0.avg)/2, best_prec)
+    # is_best = (val_precision_1.avg + val_precision_0.avg)/2 > best_prec
+    is_best = (val_loss_avg[-1]) < best_val_loss
+    # best_prec = max((val_precision_1.avg + val_precision_0.avg)/2, best_prec)
+    best_val_loss = min(val_loss_avg[-1],best_val_loss)
+
     # SEGMENTATION
     utils.save_checkpoint({
         'epoch': epoch + 1,
         'model_state_dict': mpn_model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
-        'best_prec': best_prec,
+        'prec': (val_precision_1.avg + val_precision_0.avg)/2,
+        'prec1': val_precision_1_avg,
+        'prec0': val_precision_0_avg,
+        'best_loss':  best_val_loss,
         'model_parameters': num_params_mpn,
 
         'CONFIG': CONFIG

@@ -26,8 +26,8 @@ def  process(data_path):
             tStart = time.time()
             print('Processing ' + c)
 
-            # vdo_dir = os.path.join(data_path, c, c + '.avi')
-            vdo_dir = os.path.join(data_path, c, c + '.mp4')
+            vdo_dir = os.path.join(data_path, c, c + '.avi')
+            # vdo_dir = os.path.join(data_path, c, c + '.mp4')
 
             video = cv2.VideoCapture(vdo_dir)
 
@@ -70,7 +70,7 @@ def  process(data_path):
 if __name__ == '__main__':
 
 
-    data_path = '/home/elg/Datasets/CAMPUS_Garden1/'
+    data_path = '/home/elg/Datasets/EPFL-Basketball/'
     process(data_path)
 
 

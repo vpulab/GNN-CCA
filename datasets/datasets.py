@@ -1,3 +1,6 @@
+# import sys
+# sys.path.insert(0, './libs/deeppersonreid/torchreid')
+# sys.path.insert(0, './libs/deeppersonreid/torchreid/utils')
 import numpy as np
 from torch.utils.data import Dataset
 from PIL import Image
@@ -11,8 +14,10 @@ from skimage.io import imread
 from skimage.transform import ProjectiveTransform,warp
 import cv2
 import utils
-
+# import torchre
 from imgaug import augmenters as iaa
+# from libs.deeppersonreid.torchreid.data.transforms import build_transforms
+
 from torchreid.data.transforms import build_transforms
 
 COL_NAMES_EPFL = ('id', 'xmin', 'ymin', 'xmax', 'ymax', 'frame', 'lost', 'occluded', 'generated','label')

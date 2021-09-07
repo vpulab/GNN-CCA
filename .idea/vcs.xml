@@ -3,5 +3,6 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/libs/deep-person-reid" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/libs/deeppersonreid" vcs="Git" />
   </component>
 </project>

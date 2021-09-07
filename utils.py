@@ -444,22 +444,19 @@ def save_checkpoint(state, is_best, path, filename):
         print('Best model updated.')
         shutil.copyfile(path + '/files/' + filename + '_latest.pth.tar',
                         path + '/files/' + filename + '_best.pth.tar')
-        shutil.copyfile('config/config.yaml', path + '/files/config.yaml')
+        # shutil.copyfile('config/config_training.yaml', path + '/files/config.yaml')
 
-        # dict_file = {'TRAIN': {'ACCURACY': str(round(state['best_prec_train'], 2)) + ' %'},
-        #              'VALIDATION': {'ACCURACY': str(round(state['best_prec_val'], 2)) + ' %'},
-        #              'EPOCH': state['epoch'],
-        #              'EPOCH TIME': str(round(state['time_per_epoch'], 2)) + ' Minutes',
-        #              'COMMENTS': state['CONFIG']['MODEL']['COMMENTS'],
-        #              'MODEL PARAMETERS': str(state['model_parameters']) + ' Millions',
-        #              'DATASET': state['CONFIG']['DATASET']['NAME']}
-        dict_file = {'TRAIN': {'ACCURACY': str(round(state['best_prec'], 2)) + ' %'},
+        dict_file = {'TRAIN': {'ACCURACY_AVG': str(round(state['prec'], 2)) + ' %',
+                               'ACCURACY_1': str(round(state['prec1'][-1], 2)) + ' %',
+                               'ACCURACY_0': str(round(state['prec0'][-1], 2)) + ' %'},
                      'EPOCH': state['epoch'],
                      'MODEL PARAMETERS': str(state['model_parameters']) + ' Millions',
-                     'DATASET': state['CONFIG']['DATASET_TRAIN']['NAME']}
+                     'DATASET': state['CONFIG']['DATASET_TRAIN']['NAME'],
+                     'VAL_LOSS': state['best_loss']}
 
         with open(os.path.join(path, 'Summary Report.yaml'), 'w') as file:
             yaml.safe_dump(dict_file, file)
+
     #
     # dict_mean_file = {'Last ten epochs avg training accuracy': str(state['10epoch_train_prec']),
     #                   'Last ten epochs avg testing accuracy': str(state['10epoch_test_prec'])

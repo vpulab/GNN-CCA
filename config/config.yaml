@@ -97,72 +97,62 @@ GRAPH_NET_PARAMS:
   reattach_initial_edges: False  #  elg. Original: TrueDetermines whether initially encoded edge feats are used during node updates
 
   encoder_feats_dict:
-    resnet50:
-      #EDGES FEATURES ENCODER: in my case not encoding with just 1
-      edge_in_dim: 4 # elg: 2 if only appearance
-      edge_fc_dims: [] #elg before [6]
-      edge_out_dim: 6 # elg: original = 16 ours 1 if not encoding
-
-      #NODE FEATURES ENCODER
-      node_in_dim: 2048
-      #node_fc_dims: [512, 128]
-      node_fc_dims: [128]
-      node_out_dim: 32
-      dropout_p: 0
-      use_batchnorm: False
-
-    bdnet_market:
-      #EDGES FEATURES ENCODER: in my case not encoding with just 1
-      edge_in_dim: 4 # elg: 2 if only appearance
-      edge_fc_dims: [] #elg before [6]
-      edge_out_dim: 6 # elg: original = 16 ours 1 if not encoding
-
-      #NODE FEATURES ENCODER
-      node_in_dim: 512
-      #node_fc_dims: [512, 128]
-      node_fc_dims: [128]
-      node_out_dim: 32
-      dropout_p: 0
-      use_batchnorm: False
-    bdnet_cuhk:
-      #EDGES FEATURES ENCODER: in my case not encoding with just 1
+    edges:
       edge_in_dim: 4 # elg: 2 if only appearance
       edge_fc_dims: [ ] #elg before [6]
       edge_out_dim: 6 # elg: original = 16 ours 1 if not encoding
 
-      #NODE FEATURES ENCODER
-      node_in_dim: 512
-      #node_fc_dims: [512, 128]
-      node_fc_dims: [ 128 ]
-      node_out_dim: 32
-      dropout_p: 0
-      use_batchnorm: False
-    osnet_ms_c_d:
-      #EDGES FEATURES ENCODER: in my case not encoding with just 1
-      edge_in_dim: 4 # elg: 2 if only appearance
-      edge_fc_dims: [ ] #elg before [6]
-      edge_out_dim: 6 # elg: original = 16 ours 1 if not encoding
+    nodes:
+      resnet50:
+        #EDGES FEATURES ENCODER: in my case not encoding with just 1
+  #      edge_in_dim: 4 # elg: 2 if only appearance
+  #      edge_fc_dims: [] #elg before [6]
+  #      edge_out_dim: 6 # elg: original = 16 ours 1 if not encoding
 
-      #NODE FEATURES ENCODER
-      node_in_dim: 512
-      #node_fc_dims: [512, 128]
-      node_fc_dims: [128]
-      node_out_dim: 32
-      dropout_p: 0
-      use_batchnorm: True #False
-    osnet_market:
-      #EDGES FEATURES ENCODER: in my case not encoding with just 1
-      edge_in_dim: 4 # elg: 2 if only appearance
-      edge_fc_dims: [ ] #elg before [6]
-      edge_out_dim: 6 # elg: original = 16 ours 1 if not encoding
+        #NODE FEATURES ENCODER
+        node_in_dim: 2048
+        #node_fc_dims: [512, 128]
+        node_fc_dims: [128]
+        node_out_dim: 32
+        dropout_p: 0
+        use_batchnorm: False
 
-      #NODE FEATURES ENCODER
-      node_in_dim: 512
-      #node_fc_dims: [512, 128]
-      node_fc_dims: [ 128 ]
-      node_out_dim: 32
-      dropout_p: 0
-      use_batchnorm: False
+      bdnet_market:
+
+        #NODE FEATURES ENCODER
+        node_in_dim: 512
+        #node_fc_dims: [512, 128]
+        node_fc_dims: [128]
+        node_out_dim: 32
+        dropout_p: 0
+        use_batchnorm: False
+      bdnet_cuhk:
+
+        #NODE FEATURES ENCODER
+        node_in_dim: 512
+        #node_fc_dims: [512, 128]
+        node_fc_dims: [ 128 ]
+        node_out_dim: 32
+        dropout_p: 0
+        use_batchnorm: False
+      osnet_ms_c_d:
+
+        #NODE FEATURES ENCODER
+        node_in_dim: 512
+        #node_fc_dims: [512, 128]
+        node_fc_dims: [128]
+        node_out_dim: 32
+        dropout_p: 0
+        use_batchnorm: True #False
+      osnet_market:
+
+        #NODE FEATURES ENCODER
+        node_in_dim: 512
+        #node_fc_dims: [512, 128]
+        node_fc_dims: [ 128 ]
+        node_out_dim: 32
+        dropout_p: 0
+        use_batchnorm: False
 
 
   # MPN EDGE UPDATE

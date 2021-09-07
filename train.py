@@ -148,13 +148,13 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
 
 
     for i, data in enumerate(train_loader):
-        if i >= 0:
+        if i >=0:
 
             start_time = time.time()
 
             ########### Data extraction ###########
             [bboxes, data_df,max_dist] = data
-
+            # max_dist = [1] * len(max_dist)
             len_graphs = [len(item) for item in data_df]
             with torch.no_grad():
                 if CONFIG['CNN_MODEL']['arch'] == 'resnet50':
@@ -163,6 +163,11 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
                     node_embeds = cnn_model(torch.cat(bboxes, dim=0).cuda())
                     reid_embeds= node_embeds
 
+            #reid embeds needs to be normalize before computing distances
+
+            if CONFIG['CNN_MODEL']['L2norm']:
+                reid_embeds = F.normalize(reid_embeds, p= 2,dim=0)
+                node_embeds =  F.normalize(node_embeds, p= 2,dim=0)
 
             max_counter = 0
             prev_max_counter = 0
@@ -210,9 +215,9 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
 
                     # features reid distances between each pair of points
                     emb_dist_g = F.pairwise_distance(reid_embeds[edge_ixs_g[0]], reid_embeds[edge_ixs_g[1]]).view(-1, 1)
-                    node_dist_g = F.pairwise_distance(node_embeds[edge_ixs_g[0]], node_embeds[edge_ixs_g[1]]).view(-1, 1)
+                    # node_dist_g = F.pairwise_distance(node_embeds[edge_ixs_g[0]], node_embeds[edge_ixs_g[1]]).view(-1, 1)
                     emb_dist_g_cos = F.cosine_similarity(reid_embeds[edge_ixs_g[0]], reid_embeds[edge_ixs_g[1]]).view(-1, 1)
-                    node_dist_g_cos = F.cosine_similarity(node_embeds[edge_ixs_g[0]], node_embeds[edge_ixs_g[1]]).view(-1, 1)
+                    # node_dist_g_cos = F.cosine_similarity(node_embeds[edge_ixs_g[0]], node_embeds[edge_ixs_g[1]]).view(-1, 1)
 
                     # coordinates of each pair of points
 
@@ -227,26 +232,36 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
                     #Convert distances to meters
                     spatial_dist_g = torch.unsqueeze((torch.from_numpy(paired_distances(points1, points2))), dim=1).cuda()
                     spatial_dist_g_norm = torch.from_numpy(spatial_dist_g.cpu().numpy() / max_dist[g]).cuda()
-                    spatial_dist_x = torch.abs(torch.from_numpy(xws_1 - xws_2)).cuda()
-                    spatial_dist_x_norm = (spatial_dist_x / max_dist[g])
-                    spatial_dist_y = torch.abs(torch.from_numpy(yws_1 - yws_2)).cuda()
-                    spatial_dist_y_norm = (spatial_dist_y / max_dist[g]).cuda()
+
+                    spatial_dist_manh_g = torch.unsqueeze((torch.from_numpy(paired_distances(points1, points2,metric='manhattan'))),       dim=1).cuda()
+                    spatial_dist_manh_g_norm = torch.from_numpy(spatial_dist_g.cpu().numpy() / max_dist[g]).cuda()
+
+                    # spatial_dist_x = torch.abs(torch.from_numpy(xws_1 - xws_2)).cuda()
+                    # spatial_dist_x_norm = (spatial_dist_x / max_dist[g])
+                    # spatial_dist_y = torch.abs(torch.from_numpy(yws_1 - yws_2)).cuda()
+                    # spatial_dist_y_norm = (spatial_dist_y / max_dist[g]).cuda()
+                    # spatial_dist_g_l.append(spatial_dist_g.cpu().numpy())
+                    # spatial_dist_g_l_norm.append(spatial_dist_g_norm.cpu().numpy())
 
                     if CONFIG['TRAINING']['ONLY_APPEARANCE']:
-                        edge_attr = torch.cat((emb_dist_g, node_dist_g, emb_dist_g_cos, node_dist_g_cos),   dim=1)
-                        # edge_attr = torch.cat((emb_dist_g, node_dist_g), dim=1)
+                        # edge_attr = torch.cat((emb_dist_g, node_dist_g, emb_dist_g_cos, node_dist_g_cos),   dim=1)
+                        edge_attr = torch.cat((emb_dist_g, emb_dist_g_cos),   dim=1)
 
                     elif CONFIG['TRAINING']['ONLY_DIST']:
-                        edge_attr = torch.cat((spatial_dist_g.type(torch.float32), spatial_dist_x.type(torch.float32), spatial_dist_y.type(torch.float32)), dim=1)
+                        edge_attr = torch.cat((spatial_dist_g_norm.type(torch.float32),spatial_dist_manh_g_norm.type(torch.float32) ), dim=1)
 
                     else:
-                        edge_attr = torch.cat((spatial_dist_g_norm.type(torch.float32), spatial_dist_x_norm.type(torch.float32), spatial_dist_y_norm.type(torch.float32), emb_dist_g), dim=1)
+                        # edge_attr = torch.cat((spatial_dist_g_norm.type(torch.float32), spatial_dist_x_norm.type(torch.float32), spatial_dist_y_norm.type(torch.float32), emb_dist_g), dim=1)
+                        edge_attr = torch.cat((spatial_dist_g_norm.type(torch.float32), spatial_dist_manh_g_norm.type(torch.float32), emb_dist_g, emb_dist_g_cos), dim=1)
+
                     # EDGE LABELS
 
                     edge_labels_g = torch.from_numpy(
                         np.asarray([1 if (data_df[g]['id'].values[data_df[g]['node'].values == edge_ixs_g_np[0][i]] ==
                                           data_df[g]['id'].values[data_df[g]['node'].values == edge_ixs_g_np[1][i]]) else 0
                                     for i in range(edge_ixs_g_np.shape[1])])).type(torch.float).cuda()
+
+
 
                     # bajar rango a 0 de edge_iuxs_g
                     edge_ixs_g = edge_ixs_g - torch.min(edge_ixs_g)
@@ -351,7 +366,6 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
 
 
 
-
             ########### Loss ###########
 
             loss, precision1, precision0, precision = compute_loss_acc(outputs, data_batch,mode='train')
@@ -386,6 +400,7 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
                       '{et}<{eta}'.format(epoch, i, len(train_loader), batch_time=train_batch_time,  loss=train_losses,
                                           acc = train_precision_class1, acc2 =train_precision_class0, et=str(datetime.timedelta(seconds=int(train_batch_time.sum))),
                                           eta=str(datetime.timedelta(seconds=int(train_batch_time.avg * (len(train_loader) - i))))))
+
 
 
 
@@ -437,7 +452,11 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
                     node_embeds = cnn_model(torch.cat(bboxes, dim=0).cuda())
                     reid_embeds= node_embeds
 
+                # reid embeds needs to be normalize before computing distances
 
+                if CONFIG['CNN_MODEL']['L2norm']:
+                    reid_embeds = F.normalize(reid_embeds, p=2, dim=0)
+                    node_embeds = F.normalize(node_embeds, p=2, dim=0)
 
                 max_counter = 0
                 prev_max_counter  = 0
@@ -489,13 +508,12 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
                         # features reid distances between each pair of points
                         emb_dist_g = F.pairwise_distance(reid_embeds[edge_ixs_g[0]], reid_embeds[edge_ixs_g[1]]).view(
                             -1, 1)
-                        node_dist_g = F.pairwise_distance(node_embeds[edge_ixs_g[0]], node_embeds[edge_ixs_g[1]]).view(
-                            -1, 1)
+                        # node_dist_g = F.pairwise_distance(node_embeds[edge_ixs_g[0]], node_embeds[edge_ixs_g[1]]).view(-1, 1)
 
                         emb_dist_g_cos = F.cosine_similarity(reid_embeds[edge_ixs_g[0]],
                                                              reid_embeds[edge_ixs_g[1]]).view(-1, 1)
-                        node_dist_g_cos = F.cosine_similarity(node_embeds[edge_ixs_g[0]],
-                                                              node_embeds[edge_ixs_g[1]]).view(-1, 1)
+                        # node_dist_g_cos = F.cosine_similarity(node_embeds[edge_ixs_g[0]],
+                        #                                       node_embeds[edge_ixs_g[1]]).view(-1, 1)
 
                         # coordinates of each pair of points
                         xws_1 = np.expand_dims(np.asarray([data_df[g]['xw'].values[item - prev_max_counter] for item in edge_ixs_g_np[0]]), axis=1)
@@ -509,24 +527,29 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
                         spatial_dist_g = torch.unsqueeze((torch.from_numpy(paired_distances(points1, points2))),
                                                          dim=1).cuda()
                         spatial_dist_g_norm = torch.from_numpy(spatial_dist_g.cpu().numpy() / max_dist[g]).cuda()
-                        spatial_dist_x = torch.abs(torch.from_numpy(xws_1 - xws_2)).cuda()
-                        spatial_dist_x_norm = (spatial_dist_x / max_dist[g])
-                        spatial_dist_y = torch.abs(torch.from_numpy(yws_1 - yws_2)).cuda()
-                        spatial_dist_y_norm = (spatial_dist_y / max_dist[g]).cuda()
+                        spatial_dist_manh_g = torch.unsqueeze(
+                            (torch.from_numpy(paired_distances(points1, points2, metric='manhattan'))), dim=1).cuda()
+                        spatial_dist_manh_g_norm = torch.from_numpy(spatial_dist_g.cpu().numpy() / max_dist[g]).cuda()
+
+                        # spatial_dist_x = torch.abs(torch.from_numpy(xws_1 - xws_2)).cuda()
+                        # spatial_dist_x_norm = (spatial_dist_x / max_dist[g])
+                        # spatial_dist_y = torch.abs(torch.from_numpy(yws_1 - yws_2)).cuda()
+                        # spatial_dist_y_norm = (spatial_dist_y / max_dist[g]).cuda()
 
                         if CONFIG['TRAINING']['ONLY_APPEARANCE']:
-                            edge_attr = torch.cat((emb_dist_g, node_dist_g, emb_dist_g_cos, node_dist_g_cos), dim=1)
-                            # edge_attr = torch.cat((emb_dist_g, node_dist_g), dim=1)
+                            # edge_attr = torch.cat((emb_dist_g, node_dist_g, emb_dist_g_cos, node_dist_g_cos),   dim=1)
+                            edge_attr = torch.cat((emb_dist_g, emb_dist_g_cos), dim=1)
 
                         elif CONFIG['TRAINING']['ONLY_DIST']:
-                            edge_attr = torch.cat((spatial_dist_g.type(torch.float32),
-                                                   spatial_dist_x.type(torch.float32),
-                                                   spatial_dist_y.type(torch.float32)), dim=1)
+                            edge_attr = torch.cat(
+                                (spatial_dist_g_norm.type(torch.float32), spatial_dist_manh_g_norm.type(torch.float32)),
+                                dim=1)
 
                         else:
+                            # edge_attr = torch.cat((spatial_dist_g_norm.type(torch.float32), spatial_dist_x_norm.type(torch.float32), spatial_dist_y_norm.type(torch.float32), emb_dist_g), dim=1)
                             edge_attr = torch.cat((spatial_dist_g_norm.type(torch.float32),
-                                                   spatial_dist_x_norm.type(torch.float32),
-                                                   spatial_dist_y_norm.type(torch.float32), emb_dist_g), dim=1)
+                                                   spatial_dist_manh_g_norm.type(torch.float32), emb_dist_g,
+                                                   emb_dist_g_cos), dim=1)
 
                         # EDGE LABELS
 
@@ -775,6 +798,7 @@ def validate_REID(val_loader, cnn_model,CONFIG):
 
 def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_model):
 
+# AÑADIR AQUI TAMBIEN LA CONVERSION DE DISTANCIAS A METROS
     val_batch_time = utils.AverageMeter('batch_time', ':6.3f')
 
     cnn_model.eval()
@@ -822,6 +846,11 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
                     node_embeds = cnn_model(torch.cat(bboxes, dim=0).cuda())
                     reid_embeds= node_embeds
                 # node_embeds, reid_embeds = cnn_model(torch.cat(bboxes, dim=0).cuda())
+
+                    # reid embeds needs to be normalize before computing distances
+
+                reid_embeds = F.normalize(reid_embeds, p=2, dim=0)
+                node_embeds = F.normalize(node_embeds, p=2, dim=0)
 
                 max_counter = 0
                 prev_max_counter = 0
@@ -1523,6 +1552,18 @@ def geometrical_association(CONFIG, val_loader):
 
 # # CODIGO PINTAS DIST Y IST NORM (va en el bucle)
 
+    # spatial_dist_g_l = []
+    #         spatial_dist_g_l_norm = []
+    #         pets_dists = []
+    #         pets_dists_norm = []
+    #         terrace_dists = []
+    #         terrace_dists_norm = []
+    #         lab_dists = []
+    #         lab_dists_norm = []
+    #         garden1_dists = []
+    #         garden1_dists_norm = []
+
+
 # spatial_dist_g = torch.unsqueeze((torch.from_numpy(paired_distances(points1, points2))), dim=1).cuda()
 #                 spatial_dist_g_l.append(spatial_dist_g.cpu().numpy())
 #                 spatial_dist_g_norm.append(spatial_dist_g.cpu().numpy() / max_dist[g])
@@ -1550,41 +1591,58 @@ def geometrical_association(CONFIG, val_loader):
 #                       edge_labels_g.cpu().numpy()[pos] == 1])
 #     lab_dists_norm.append([n / max_dist[g] for pos, n in enumerate(spatial_dist_g.cpu().numpy()) if
 #                            edge_labels_g.cpu().numpy()[pos] == 1])
-#
+# elif max_dist[g] == 85.23:  # Garden1 CAMPUS
+#     garden1_dists.append([n for pos, n in enumerate(spatial_dist_g.cpu().numpy()) if
+#                           edge_labels_g.cpu().numpy()[pos] == 1])
+#     garden1_dists_norm.append([n / max_dist[g] for pos, n in enumerate(spatial_dist_g.cpu().numpy()) if
+#                                edge_labels_g.cpu().numpy()[pos] == 1])
+
 # # CODIGO PINTAR DISTSN desopues de forwards
-# dists = np.concatenate(spatial_dist_g_l)
-# dists_norm = np.concatenate(spatial_dist_g_norm)
+#  dists = np.concatenate(spatial_dist_g_l)
+#             dists_norm = np.concatenate(spatial_dist_g_l_norm)
 #
-# pets_dists = np.concatenate(pets_dists)
-# pets_dists_norm = np.concatenate(pets_dists_norm)
-# terrace_dists = np.concatenate(terrace_dists)
-# terrace_dists_norm = np.concatenate(terrace_dists_norm)
-# lab_dists = np.concatenate(lab_dists)
-# lab_dists_norm = np.concatenate(lab_dists_norm)
-# pets_dists_mean = np.mean(pets_dists)
-# pets_dists_norm_mean = np.mean(pets_dists_norm)
-# terrace_dists_mean = np.mean(terrace_dists)
-# terrace_dists_norm_mean = np.mean(terrace_dists_norm)
-# lab_dists_norm_mean = np.mean(lab_dists_norm)
-# lab_dists_mean = np.mean(lab_dists)
+#             pets_dists = np.concatenate(pets_dists)
+#             pets_dists_norm = np.concatenate(pets_dists_norm)
+#             terrace_dists = np.concatenate(terrace_dists)
+#             terrace_dists_norm = np.concatenate(terrace_dists_norm)
+#             lab_dists = np.concatenate(lab_dists)
+#             lab_dists_norm = np.concatenate(lab_dists_norm)
+#             garden1_dists = np.concatenate(garden1_dists)
+#             garden1_dists_norm = np.concatenate(garden1_dists_norm)
 #
-# plt.figure()
-# plt.subplot(2, 1, 1)
-# plt.scatter(np.arange(len(dists)), dists, c=data_batch.edge_labels.cpu().numpy())
-# plt.plot(np.arange(len(dists)), np.ones(len(dists)) * terrace_dists_mean)
-# plt.plot(np.arange(len(dists)), np.ones(len(dists)) * pets_dists_mean)
-# plt.plot(np.arange(len(dists)), np.ones(len(dists)) * lab_dists_mean)
 #
-# plt.title('Distances. Mean(1) terrace = ' + str(int(terrace_dists_mean)) + ' Mean(1) pets = ' + str(
-#     int(pets_dists_mean)) + 'Mean(1) Lab = ' + str(int(lab_dists_mean)))
-# plt.show(block=False)
-# plt.subplot(2, 1, 2)
-# plt.scatter(np.arange(len(dists_norm)), dists_norm, c=data_batch.edge_labels.cpu().numpy())
-# plt.plot(np.arange(len(dists)), np.ones(len(dists)) * terrace_dists_norm_mean)
-# plt.plot(np.arange(len(dists)), np.ones(len(dists)) * pets_dists_norm_mean)
-# plt.plot(np.arange(len(dists)), np.ones(len(dists)) * lab_dists_norm_mean)
+#             pets_dists_mean = np.mean(pets_dists)
+#             pets_dists_norm_mean = np.mean(pets_dists_norm)
+#             terrace_dists_mean = np.mean(terrace_dists)
+#             terrace_dists_norm_mean = np.mean(terrace_dists_norm)
+#             lab_dists_norm_mean = np.mean(lab_dists_norm)
+#             lab_dists_mean = np.mean(lab_dists)
+#             garden1_dists_mean = np.mean(garden1_dists)
+#             garden1_dists_norm_mean = np.mean(garden1_dists_norm)
 #
-# plt.title('Distances in meters. Mean(1) terrace = ' + str((terrace_dists_norm_mean)) + ' Mean(1) pets = ' + str(
-#     pets_dists_norm_mean) + 'Mean(1) Lab = ' + str(lab_dists_norm_mean))
 #
-# plt.show(block=False)
+#             plt.figure()
+#             plt.subplot(2, 1, 1)
+#             plt.scatter(np.arange(len(dists)), dists, c=data_batch.edge_labels.cpu().numpy())
+#             plt.plot(np.arange(len(dists)), np.ones(len(dists)) * terrace_dists_mean)
+#             plt.plot(np.arange(len(dists)), np.ones(len(dists)) * pets_dists_mean)
+#             plt.plot(np.arange(len(dists)), np.ones(len(dists)) * lab_dists_mean)
+#             plt.plot(np.arange(len(dists)), np.ones(len(dists)) * garden1_dists_mean)
+#
+#
+#             plt.title('Distances. Mean(1) terrace = ' + str(int(terrace_dists_mean)) + ' Mean(1) pets = ' + str(
+#                 int(pets_dists_mean)) + 'Mean(1) Lab = ' + str(int(lab_dists_mean)) + 'Mean(1) Garden1 = ' + str(int(garden1_dists_mean)) )
+#             plt.show(block=False)
+#             plt.subplot(2, 1, 2)
+#             plt.scatter(np.arange(len(dists_norm)), dists_norm, c=data_batch.edge_labels.cpu().numpy())
+#             plt.plot(np.arange(len(dists)), np.ones(len(dists)) * terrace_dists_norm_mean)
+#             plt.plot(np.arange(len(dists)), np.ones(len(dists)) * pets_dists_norm_mean)
+#             plt.plot(np.arange(len(dists)), np.ones(len(dists)) * lab_dists_norm_mean)
+#             plt.plot(np.arange(len(dists)), np.ones(len(dists)) * garden1_dists_norm_mean)
+#
+#
+#             plt.title(
+#                 'Distances in meters. Mean(1) terrace = ' + str((terrace_dists_norm_mean)) + ' Mean(1) pets = ' + str(
+#                     pets_dists_norm_mean) + 'Mean(1) Lab = ' + str(lab_dists_norm_mean) + 'Mean(1) Garden1 = ' + str(garden1_dists_norm_mean) )
+#
+#             plt.show(block=False)
