@@ -163,7 +163,10 @@ class MOTMPNet(nn.Module):
         self.model_params = model_params
 
         # Define Encoder and Classifier Networks
-        encoder_feats_dict = model_params['encoder_feats_dict'][arch]
+        edges_params = model_params['encoder_feats_dict']['edges']
+        nodes_params = model_params['encoder_feats_dict']['nodes'][arch]
+        edges_params.update(nodes_params)
+        encoder_feats_dict = edges_params
         classifier_feats_dict = model_params['classifier_feats_dict']
 
         self.encoder = MLPGraphIndependent(**encoder_feats_dict)

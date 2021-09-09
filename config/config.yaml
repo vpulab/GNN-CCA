@@ -1,10 +1,17 @@
-ID: pruebaGNN_trainTERR_osnet_mscd_onlyapp_2L2_2cos_IMAUG_BN
+ID: prueba_eval_
 COMMENT: nodereid = embed reid  repetido dos veces
 MODE: GNN_eval #GNN, REID, GNN_eval, eval_RANK, REID_th
 
 #FOR GNN EVAL
 ROUNDING: True
-PRETRAINED_GNN_MODEL:  /home/elg/Repositories/GNN-cross-camera-association/results/GNN_trainTERR_bdnetMarket_xtractor_distxy_distx_disty2021-05-19 18:24:32/files/GNN_trainTERR_bdnetExtractor_distxy_distx_disty_best.pth.tar
+CUTTING: True
+DISJOINT: True
+PRETRAINED_GNN_MODEL: /home/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_trainPETSyTerrace_resnet_app_dist_distx_disty_erase0.252021-07-09 10:42:28/files/GNN_trainPETSyTerrace_resnet_app_dist_distx_disty_erase0.25_best.pth.tar
+
+#  /home/elg/Repositories/GNN-Cross-Camera-Association/results/train_terr_not_attacing_fc6_edgeupdate2021-04-24 21:12:44/files/train_terr_not_attacing_fc6_edgeupdate_best.pth.tar
+#  /home/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_trainPETSyTerrace_resnet_app_dist_distx_disty_erase0.252021-07-09 10:42:28/files/GNN_trainPETSyTerrace_resnet_app_dist_distx_disty_erase0.25_best.pth.tar
+#  /home/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_trainLAByTerrace_resnet_app_dist_distx_disty_erase0.252021-07-08 15:48:49/files/GNN_trainLAByTerrace_resnet_app_dist_distx_disty_erase0.25_best.pth.tar
+#  /home/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_trainTERR_bdnetMarket_xtractor_distxy_distx_disty2021-05-19 18:24:32/files/GNN_trainTERR_bdnetExtractor_distxy_distx_disty_best.pth.tar
 
 #  /home/elg/Repositories/GNN-cross-camera-association/results/GNN_trainTERR_osnet_mscd_app_dist_distx_disty2021-05-26 22:20:54/files/GNN_trainTERR_osnet_mscd_app_dist_distx_disty_best.pth.tar
 #  /home/elg/Repositories/GNN-cross-camera-association/results/GNN_trainTERR_osnetMarket_app_dist_distx_disty2021-05-25 11:29:58/files/GNN_trainTERR_osnetMarket_app_dist_distx_disty_best.pth.tar
@@ -12,7 +19,7 @@ PRETRAINED_GNN_MODEL:  /home/elg/Repositories/GNN-cross-camera-association/resul
 #  /home/elg/Repositories/GNN-cross-camera-association/results/GNN_trainTERR_bdnetExtractor_distxy_distx_disty2021-05-19 18:24:32/files/GNN_trainTERR_bdnetExtractor_distxy_distx_disty_best.pth.tar
 #/home/elg/Repositories/GNN-cross-camera-association/results/GNN_trainTERR_bdnetMarket_xtractor_distxy_distx_disty2021-05-19 18:24:32/files/GNN_trainTERR_bdnetExtractor_distxy_distx_disty_best.pth.tar
 
-#  /home/elg/Repositories/GNN-cross-camera-association/results/train_terr_not_attacing_fc6_edgeupdate2021-04-24 21:12:44/files/train_terr_not_attacing_fc6_edgeupdate_best.pth.tar
+#  /home/elg/Repositories/GNN-Cross-Camera-Association/results/train_terr_not_attacing_fc6_edgeupdate2021-04-24 21:12:44/files/train_terr_not_attacing_fc6_edgeupdate_best.pth.tar
 
 
 #FOR eval_RANK
@@ -68,7 +75,7 @@ TRAINING:
     ONLY_DIST: False
 
 CNN_MODEL:
-    arch: bdnet_market #resnet50 , bdnet_market, bdnet_cuhk, osnet_market, osnet_ms_c_d
+    arch: resnet50 #resnet50 , bdnet_market, bdnet_cuhk, osnet_market, osnet_ms_c_d
     model_weights_path:
         resnet50: ./trained_models/reid/resnet50_market_cuhk_duke.tar-232
         bdnet_market: ./trained_models/top-dropblock/de00143e-market-model.pth.tar-400
@@ -90,72 +97,62 @@ GRAPH_NET_PARAMS:
   reattach_initial_edges: False  #  elg. Original: TrueDetermines whether initially encoded edge feats are used during node updates
 
   encoder_feats_dict:
-    resnet50:
-      #EDGES FEATURES ENCODER: in my case not encoding with just 1
-      edge_in_dim: 4 # elg: 2 if only appearance
-      edge_fc_dims: [] #elg before [6]
-      edge_out_dim: 6 # elg: original = 16 ours 1 if not encoding
-
-      #NODE FEATURES ENCODER
-      node_in_dim: 2048
-      #node_fc_dims: [512, 128]
-      node_fc_dims: [128]
-      node_out_dim: 32
-      dropout_p: 0
-      use_batchnorm: False
-
-    bdnet_market:
-      #EDGES FEATURES ENCODER: in my case not encoding with just 1
-      edge_in_dim: 4 # elg: 2 if only appearance
-      edge_fc_dims: [] #elg before [6]
-      edge_out_dim: 6 # elg: original = 16 ours 1 if not encoding
-
-      #NODE FEATURES ENCODER
-      node_in_dim: 512
-      #node_fc_dims: [512, 128]
-      node_fc_dims: [128]
-      node_out_dim: 32
-      dropout_p: 0
-      use_batchnorm: False
-    bdnet_cuhk:
-      #EDGES FEATURES ENCODER: in my case not encoding with just 1
+    edges:
       edge_in_dim: 4 # elg: 2 if only appearance
       edge_fc_dims: [ ] #elg before [6]
       edge_out_dim: 6 # elg: original = 16 ours 1 if not encoding
 
-      #NODE FEATURES ENCODER
-      node_in_dim: 512
-      #node_fc_dims: [512, 128]
-      node_fc_dims: [ 128 ]
-      node_out_dim: 32
-      dropout_p: 0
-      use_batchnorm: False
-    osnet_ms_c_d:
-      #EDGES FEATURES ENCODER: in my case not encoding with just 1
-      edge_in_dim: 4 # elg: 2 if only appearance
-      edge_fc_dims: [ ] #elg before [6]
-      edge_out_dim: 6 # elg: original = 16 ours 1 if not encoding
+    nodes:
+      resnet50:
+        #EDGES FEATURES ENCODER: in my case not encoding with just 1
+  #      edge_in_dim: 4 # elg: 2 if only appearance
+  #      edge_fc_dims: [] #elg before [6]
+  #      edge_out_dim: 6 # elg: original = 16 ours 1 if not encoding
 
-      #NODE FEATURES ENCODER
-      node_in_dim: 512
-      #node_fc_dims: [512, 128]
-      node_fc_dims: [128]
-      node_out_dim: 32
-      dropout_p: 0
-      use_batchnorm: True #False
-    osnet_market:
-      #EDGES FEATURES ENCODER: in my case not encoding with just 1
-      edge_in_dim: 4 # elg: 2 if only appearance
-      edge_fc_dims: [ ] #elg before [6]
-      edge_out_dim: 6 # elg: original = 16 ours 1 if not encoding
+        #NODE FEATURES ENCODER
+        node_in_dim: 2048
+        #node_fc_dims: [512, 128]
+        node_fc_dims: [128]
+        node_out_dim: 32
+        dropout_p: 0
+        use_batchnorm: False
 
-      #NODE FEATURES ENCODER
-      node_in_dim: 512
-      #node_fc_dims: [512, 128]
-      node_fc_dims: [ 128 ]
-      node_out_dim: 32
-      dropout_p: 0
-      use_batchnorm: False
+      bdnet_market:
+
+        #NODE FEATURES ENCODER
+        node_in_dim: 512
+        #node_fc_dims: [512, 128]
+        node_fc_dims: [128]
+        node_out_dim: 32
+        dropout_p: 0
+        use_batchnorm: False
+      bdnet_cuhk:
+
+        #NODE FEATURES ENCODER
+        node_in_dim: 512
+        #node_fc_dims: [512, 128]
+        node_fc_dims: [ 128 ]
+        node_out_dim: 32
+        dropout_p: 0
+        use_batchnorm: False
+      osnet_ms_c_d:
+
+        #NODE FEATURES ENCODER
+        node_in_dim: 512
+        #node_fc_dims: [512, 128]
+        node_fc_dims: [128]
+        node_out_dim: 32
+        dropout_p: 0
+        use_batchnorm: True #False
+      osnet_market:
+
+        #NODE FEATURES ENCODER
+        node_in_dim: 512
+        #node_fc_dims: [512, 128]
+        node_fc_dims: [ 128 ]
+        node_out_dim: 32
+        dropout_p: 0
+        use_batchnorm: False
 
 
   # MPN EDGE UPDATE

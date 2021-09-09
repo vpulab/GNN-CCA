@@ -22,7 +22,7 @@ from torch.nn import functional as F
 
 
 
-def compute_rounding(graph_obj, edges_out, probs, undirected_edges = False, return_flow_vals = False):
+def compute_rounding(graph_obj, edges_out, probs,predicted_active_edges):
     """
     Determines the proportion of Flow Conservation inequalities that are satisfied.
     For each node, the sum of incoming (resp. outgoing) edge values must be less or equal than 1.
@@ -39,6 +39,7 @@ def compute_rounding(graph_obj, edges_out, probs, undirected_edges = False, retu
 
     """
     # Get tensors indicataing which nodes have incoming and outgoing flows (e.g. nodes in first frame have no in. flow)
+    undirected_edges = False
     edge_ixs = graph_obj.edge_index
     if undirected_edges:
         sorted, _ = edge_ixs.t().sort(dim = 1)
@@ -52,8 +53,7 @@ def compute_rounding(graph_obj, edges_out, probs, undirected_edges = False, retu
     # Compute incoming and outgoing flows for each node
     flow_out = scatter_add(edges_out, sorted[0],dim_size=graph_obj.num_nodes) / div_factor
     flow_in = scatter_add(edges_out, sorted[1], dim_size=graph_obj.num_nodes) / div_factor
-    if 5 in flow_out:
-        a=1
+
 
     nodes_flow_out = np.where(flow_out.cpu().numpy() > 3)
     nodes_flow_in = np.where(flow_in.cpu().numpy() > 3)
@@ -66,16 +66,68 @@ def compute_rounding(graph_obj, edges_out, probs, undirected_edges = False, retu
 
     while flag_rounding_needed:
         edges_to_remove = []
+        G = nx.DiGraph(predicted_active_edges)
+        bridges = list(nx.bridges(nx.to_undirected(G)))
+        bridges = bridges + [n[::-1] for n in bridges]
 
-        for n in nodes_flow_out[0]:
-            pos =np.intersect1d(np.where(edge_ixs.cpu().numpy()[0] == n), np.where(new_predictions.cpu().numpy()==1)[0])
-            remove_edge = pos[np.argmin(probs[pos].cpu().numpy())]
-            edges_to_remove.append(remove_edge)
+        # METHOD BRIDGES
+        if len(bridges) == 0:
+            for n in nodes_flow_out[0]:
+                pos =np.intersect1d(np.where(edge_ixs.cpu().numpy()[0] == n), np.where(new_predictions.cpu().numpy()==1)[0])
+                remove_edge = pos[np.argmin(probs[pos].cpu().numpy())]
+                edges_to_remove.append(remove_edge)
 
-        for n in nodes_flow_in[0]:
-            pos = np.intersect1d(np.where(edge_ixs.cpu().numpy()[1] == n), np.where(new_predictions.cpu().numpy()==1)[0])
-            remove_edge = pos[np.argmin(probs[pos].cpu().numpy())]
-            edges_to_remove.append(remove_edge)
+            for n in nodes_flow_in[0]:
+                pos = np.intersect1d(np.where(edge_ixs.cpu().numpy()[1] == n), np.where(new_predictions.cpu().numpy()==1)[0])
+                remove_edge = pos[np.argmin(probs[pos].cpu().numpy())]
+                edges_to_remove.append(remove_edge)
+        else:  # if there are bridges
+            a=1
+            for n in nodes_flow_out[0]:
+                pos =np.intersect1d(np.where(edge_ixs.cpu().numpy()[0] == n), np.where(new_predictions.cpu().numpy()==1)[0])
+                edge_tuple = list(map(tuple, np.transpose(edge_ixs.cpu().numpy())))
+                pos_bridges = [p for p, tp in enumerate(edge_tuple) if tp in bridges]
+
+                for p, na in enumerate(pos):
+                    if na in pos_bridges:
+                        edges_to_remove.append(na)
+
+            for n in nodes_flow_in[0]:
+                pos = np.intersect1d(np.where(edge_ixs.cpu().numpy()[1] == n), np.where(new_predictions.cpu().numpy()==1)[0])
+                edge_tuple = list(map(tuple, np.transpose(edge_ixs.cpu().numpy())))
+                pos_bridges = [p for p, tp in enumerate(edge_tuple) if tp in bridges]
+
+                for p, na in enumerate(pos):
+                    if na in pos_bridges:
+                        edges_to_remove.append(na)
+
+            if edges_to_remove == []:  # do it regularly
+                for n in nodes_flow_out[0]:
+                    pos = np.intersect1d(np.where(edge_ixs.cpu().numpy()[0] == n),
+                                         np.where(new_predictions.cpu().numpy() == 1)[0])
+                    remove_edge = pos[np.argmin(probs[pos].cpu().numpy())]
+                    edges_to_remove.append(remove_edge)
+
+                for n in nodes_flow_in[0]:
+                    pos = np.intersect1d(np.where(edge_ixs.cpu().numpy()[1] == n),
+                                         np.where(new_predictions.cpu().numpy() == 1)[0])
+                    remove_edge = pos[np.argmin(probs[pos].cpu().numpy())]
+                    edges_to_remove.append(remove_edge)
+
+
+        # METHOD NO BRIGDES
+        # for n in nodes_flow_out[0]:
+        #     pos = np.intersect1d(np.where(edge_ixs.cpu().numpy()[0] == n),
+        #                          np.where(new_predictions.cpu().numpy() == 1)[0])
+        #     remove_edge = pos[np.argmin(probs[pos].cpu().numpy())]
+        #     edges_to_remove.append(remove_edge)
+        #
+        # for n in nodes_flow_in[0]:
+        #     pos = np.intersect1d(np.where(edge_ixs.cpu().numpy()[1] == n),
+        #                          np.where(new_predictions.cpu().numpy() == 1)[0])
+        #     remove_edge = pos[np.argmin(probs[pos].cpu().numpy())]
+        #     edges_to_remove.append(remove_edge)
+
 
 
         if edges_to_remove:
@@ -213,7 +265,7 @@ def visualize(h, color, edge_labels = None,edge_index =None ,node_label = None,e
     #     list_node_label = {n: node_label[n] for n in range(len(node_label))}
     #     nx.draw_networkx_labels(h, pos, labels=list_node_label, font_size=16)
 
-    plt.show()
+    plt.show(block=False)
     a=1
 
 
@@ -296,6 +348,95 @@ def compute_SCC_and_Clusters(G,n_nodes):
     #
     return ID_pred, n_components_pred
 
+
+def disjoint_big_clusters(ID_pred, predictions, preds_prob, edge_list,data_batch,predicted_act_edges,G):
+    # Count how many items in each class, then look which cluster label is the one with more than 4 elements (# cameras)
+    label_ID_to_disjoint = np.where(np.bincount(ID_pred) > 4)[0]
+    if len(label_ID_to_disjoint) >= 1:
+        # global_idx_new_predicted_active_edges = [pos for pos, p in enumerate(predictions) if p == 1]
+
+        # COMPROBAR SI HAY DOS
+        l = label_ID_to_disjoint[0]
+        flag_need_disjoint = True
+        while flag_need_disjoint:
+            global_idx_new_predicted_active_edges = [pos for pos, p in enumerate(predictions) if p == 1]
+
+            nodes_to_disjoint = np.where(ID_pred == l)
+
+
+
+            idx_active_edges_to_disjoint = [pos for pos, n in enumerate(predicted_act_edges) if
+                                           np.any(np.in1d(nodes_to_disjoint, n))]
+
+            # OPTION: REMOVING BRIDGES
+            bridges = list(nx.bridges(nx.to_undirected(G)))
+            bridges = bridges + [n[::-1] for n in bridges]
+            # candidates_edges_disjoint = [predicted_act_edges[p] for p in idx_active_edges_to_disjoint]
+
+            if len(bridges) > 0:
+                a = 1
+                idx_bridges = [predicted_act_edges.index(n) for pos, n in enumerate(bridges)]
+                global_idx_bridges = np.asarray(global_idx_new_predicted_active_edges)[ np.asarray(idx_bridges)]
+                min_prob = np.min(preds_prob[global_idx_bridges].cpu().numpy())
+                global_idx_min_prob = np.where(preds_prob.cpu().numpy() == min_prob)[0]
+                predictions[global_idx_min_prob] = 0
+
+            if len(bridges) == 0:
+                global_idx_edges_disjoint = np.asarray(global_idx_new_predicted_active_edges)[
+                    np.asarray(idx_active_edges_to_disjoint)]
+                min_prob = np.min(preds_prob[global_idx_edges_disjoint].cpu().numpy())
+                global_idx_min_prob = np.where(preds_prob.cpu().numpy() == min_prob)[0]
+                predictions[global_idx_min_prob] = 0
+
+            # OPTION: REMOVING MINIMUM PROB EDGES
+            # global_idx_edges_disjoint = np.asarray(global_idx_new_predicted_active_edges)[
+            #     np.asarray(idx_active_edges_to_disjoint)]
+            # min_prob = np.min(preds_prob[global_idx_edges_disjoint].cpu().numpy())
+            # global_idx_min_prob = np.where(preds_prob.cpu().numpy() == min_prob)[0]
+            # predictions[global_idx_min_prob] = 0
+
+
+
+            # Check if still need to disjoint
+            predicted_act_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in
+                                          enumerate(predictions) if p == 1]
+
+            G = nx.DiGraph(predicted_act_edges)
+            ID_pred, n_clusters_pred = compute_SCC_and_Clusters(G,   data_batch.num_nodes)
+
+            if np.bincount(ID_pred)[l] > 4:
+                flag_need_disjoint = True
+                predictions, predicted_act_edges = remove_edges_single_direction(predicted_act_edges, predictions,
+                                                                                 edge_list)
+                G = nx.DiGraph(predicted_act_edges)
+            else:
+                flag_need_disjoint = False
+                predictions,predicted_act_edges =  remove_edges_single_direction(predicted_act_edges, predictions, edge_list)
+                G = nx.DiGraph(predicted_act_edges)
+
+                disjoint_big_clusters(ID_pred, predictions, preds_prob, edge_list, data_batch, predicted_act_edges,G)
+
+    return predictions
+def remove_edges_single_direction(active_edges, predictions, edge_list):
+    idx_active_edges_to_remove = [pos for pos, n in enumerate(active_edges) if (n[::-1] not in active_edges)]
+    if idx_active_edges_to_remove != []:
+        predicted_active_edges_global_pos = [pos for pos, p in enumerate(predictions) if p == 1]
+
+        global_idx_edges_to_remove = np.asarray(predicted_active_edges_global_pos)[np.asarray(idx_active_edges_to_remove)]
+        new_predictions = predictions.clone()
+        new_predictions[global_idx_edges_to_remove] = 0
+
+        new_predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in
+                                      enumerate(new_predictions) if p == 1]
+
+    else:
+        new_predictions = predictions.clone()
+        new_predicted_active_edges = active_edges
+
+
+    return new_predictions, new_predicted_active_edges
+
+
 def save_checkpoint(state, is_best, path, filename):
     torch.save(state, path + '/files/' + filename + '_latest.pth.tar')
 
@@ -303,22 +444,19 @@ def save_checkpoint(state, is_best, path, filename):
         print('Best model updated.')
         shutil.copyfile(path + '/files/' + filename + '_latest.pth.tar',
                         path + '/files/' + filename + '_best.pth.tar')
-        shutil.copyfile('config/config.yaml', path + '/files/config.yaml')
+        # shutil.copyfile('config/config_training.yaml', path + '/files/config.yaml')
 
-        # dict_file = {'TRAIN': {'ACCURACY': str(round(state['best_prec_train'], 2)) + ' %'},
-        #              'VALIDATION': {'ACCURACY': str(round(state['best_prec_val'], 2)) + ' %'},
-        #              'EPOCH': state['epoch'],
-        #              'EPOCH TIME': str(round(state['time_per_epoch'], 2)) + ' Minutes',
-        #              'COMMENTS': state['CONFIG']['MODEL']['COMMENTS'],
-        #              'MODEL PARAMETERS': str(state['model_parameters']) + ' Millions',
-        #              'DATASET': state['CONFIG']['DATASET']['NAME']}
-        dict_file = {'TRAIN': {'ACCURACY': str(round(state['best_prec'], 2)) + ' %'},
+        dict_file = {'TRAIN': {'ACCURACY_AVG': str(round(state['prec'], 2)) + ' %',
+                               'ACCURACY_1': str(round(state['prec1'][-1], 2)) + ' %',
+                               'ACCURACY_0': str(round(state['prec0'][-1], 2)) + ' %'},
                      'EPOCH': state['epoch'],
                      'MODEL PARAMETERS': str(state['model_parameters']) + ' Millions',
-                     'DATASET': state['CONFIG']['DATASET_TRAIN']['NAME']}
+                     'DATASET': state['CONFIG']['DATASET_TRAIN']['NAME'],
+                     'VAL_LOSS': state['best_loss']}
 
         with open(os.path.join(path, 'Summary Report.yaml'), 'w') as file:
             yaml.safe_dump(dict_file, file)
+
     #
     # dict_mean_file = {'Last ten epochs avg training accuracy': str(state['10epoch_train_prec']),
     #                   'Last ten epochs avg testing accuracy': str(state['10epoch_test_prec'])
