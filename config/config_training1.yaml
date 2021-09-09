@@ -1,4 +1,4 @@
-ID:  GNN_C4_resnet_SGD001_BNcls_warmup
+ID:  GNN_C5_bdnetC_SGD0001_BNcls_warmup5_decay10_onlyapp
 COMMENT: repeat  training, added  l2 normalization of reid emb and distances to meters
 MODE: GNN
 
@@ -8,7 +8,7 @@ PRETRAINED_GNN_MODEL:
 
 #FOR GNN
 DATASET_TRAIN:
-    NAME: [PETS2009_S2_L1_5_8,CAMPUS_Garden1,EPFL-Terrace] # PETS2009_S2_L1_5_8
+    NAME: [PETS2009_S2_L1_5_8, EPFL-Terrace] # PETS2009_S2_L1_5_8 CAMPUS_Garden1
     ROOT: /home/elg/Datasets/
     IMAUG: False
     RESIZE:
@@ -39,19 +39,19 @@ CONV_TO_M: # dist/CONV_TO_M to covert to meters
 TRAINING:
     BATCH_SIZE:
         TRAIN: 16
-        VAL: 20
+        VAL: 26
     EPOCHS: 50
     OPTIMIZER:
 #      Adam 0.001
       type: SGD
       args:
-        lr: 0.01
+        lr: 0.001
         weight_decay: 1.0e-4 #number of epochs
         momentum: 0.9
     LR_SCHEDULER:
       type:
       args:
-        step_size: 15
+        step_size: 10
         gamma: 0.1
 
     WARMUP:
@@ -59,11 +59,11 @@ TRAINING:
       NUM_EPOCHS: 5
       LR: 0
 
-    ONLY_APPEARANCE: False
+    ONLY_APPEARANCE: True
     ONLY_DIST: False
 
 CNN_MODEL:
-    arch: resnet50 #resnet50 , bdnet_market, bdnet_cuhk, osnet_market, osnet_ms_c_d
+    arch: bdnet_cuhk #resnet50 , bdnet_market, bdnet_cuhk, osnet_market, osnet_ms_c_d
     model_weights_path:
         resnet50: ./trained_models/reid/resnet50_market_cuhk_duke.tar-232
         bdnet_market: ./trained_models/top-dropblock/de00143e-market-model.pth.tar-400

@@ -148,6 +148,7 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
 
 
     for i, data in enumerate(train_loader):
+
         if i >=0:
 
             start_time = time.time()
