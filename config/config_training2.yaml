@@ -1,5 +1,5 @@
-ID:  GNN_C1_resnet_Adam0001_BNcls_onlydist
-COMMENT:
+ID:  GNN_C3_resnet_SGD0001_BNcls_warmup5_decay10_onlydist
+COMMENT: repeat  training, added  l2 normalization of reid emb and distances to meters
 MODE: GNN
 
 
@@ -8,7 +8,7 @@ PRETRAINED_GNN_MODEL:
 
 #FOR GNN
 DATASET_TRAIN:
-    NAME: [PETS2009_S2_L1_5_8,EPFL-Laboratory,EPFL-Terrace] # PETS2009_S2_L1_5_8
+    NAME: [PETS2009_S2_L1_5_8,EPFL-Laboratory,CAMPUS_Garden1] # PETS2009_S2_L1_5_8
     ROOT: /home/elg/Datasets/
     IMAUG: False
     RESIZE:
@@ -24,7 +24,7 @@ DATASET_TRAIN:
     ZERO_PADDING: False
 
 DATASET_VAL:
-    NAME: CAMPUS_Garden1
+    NAME: EPFL-Terrace
     ROOT: /home/elg/Datasets/
     MEAN: [0.485, 0.456, 0.406]
     STD: [0.229, 0.224, 0.225]
@@ -39,11 +39,11 @@ CONV_TO_M: # dist/CONV_TO_M to covert to meters
 TRAINING:
     BATCH_SIZE:
         TRAIN: 16
-        VAL: 20
-    EPOCHS: 50
+        VAL: 26
+    EPOCHS: 30
     OPTIMIZER:
 #      Adam 0.001
-      type: Adam
+      type: SGD
       args:
         lr: 0.001
         weight_decay: 1.0e-4 #number of epochs
@@ -51,7 +51,7 @@ TRAINING:
     LR_SCHEDULER:
       type:
       args:
-        step_size: 15
+        step_size: 10
         gamma: 0.1
 
     WARMUP:

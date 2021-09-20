@@ -21,7 +21,7 @@ from imgaug import augmenters as iaa
 from torchreid.data.transforms import build_transforms
 
 COL_NAMES_EPFL = ('id', 'xmin', 'ymin', 'xmax', 'ymax', 'frame', 'lost', 'occluded', 'generated','label')
-
+COL_NAMES_AIC = ('frame', 'id', 'xmin', 'ymin', 'width', 'height', 'lost', 'occluded', 'generated','label')
 
 # noinspection PyTypeChecker
 class EPFL_dataset(Dataset):
@@ -65,16 +65,26 @@ class EPFL_dataset(Dataset):
             for c in self.cameras:
                 seq_path = os.path.join(os.path.join(CONFIG['DATASET_TRAIN']['ROOT'],name,c))
                 detections_file_path = os.path.join(seq_path, 'gt', 'gt.txt')
-                det_df = pd.read_csv(detections_file_path, header=None, sep=" ")
+                if 'AIC' in name:
+                    det_df = pd.read_csv(detections_file_path, header=None, sep=",")
+                    det_df = det_df[det_df.columns[:len(COL_NAMES_AIC)]]
+                    det_df.columns = COL_NAMES_AIC
+                    det_df['ymax'] = det_df['ymin'].values + det_df['height'].values
+                    det_df['xmax'] = det_df['xmin'].values + det_df['width'].values
+                    det_df['label'] = 'CAR'
+                    det_df['id_cam'] = int(c[-1:])
 
-                # Number and order of columns is always assumed to be the same
-                det_df = det_df[det_df.columns[:len(COL_NAMES_EPFL)]]
-                det_df.columns = COL_NAMES_EPFL
-                det_df = det_df[det_df['lost'] == 0]
-                det_df['xmin'] = det_df['xmin'].values + 1
-                det_df['width'] = (det_df['xmax'] - det_df['xmin']).values
-                det_df['height'] = (det_df['ymax'] - det_df['ymin']).values
-                det_df['id_cam'] = int(c[-1:])
+
+                else: #rest of peeople datasets EPFL CAMPUS PETS
+                    det_df = pd.read_csv(detections_file_path, header=None, sep=" ")
+                    # Number and order of columns is always assumed to be the same
+                    det_df = det_df[det_df.columns[:len(COL_NAMES_EPFL)]]
+                    det_df.columns = COL_NAMES_EPFL
+                    det_df = det_df[det_df['lost'] == 0]
+                    det_df['xmin'] = det_df['xmin'].values + 1
+                    det_df['width'] = (det_df['xmax'] - det_df['xmin']).values
+                    det_df['height'] = (det_df['ymax'] - det_df['ymin']).values
+                    det_df['id_cam'] = int(c[-1:])
 
 
                 # Get ground-plane coordinates
@@ -84,6 +94,8 @@ class EPFL_dataset(Dataset):
 
                 homog_file = os.path.join(seq_path,'Homography.txt')
                 H = np.asarray(pd.read_csv(homog_file, header=None, sep="\t"))
+                if 'AIC' in name:
+                    H = np.linalg.inv(H)
 
                 xw, yw = utils.apply_homography_image_to_world(bb_mid_low_x, bb_mid_low_y, H)
 
@@ -99,10 +111,21 @@ class EPFL_dataset(Dataset):
 
                 self.data_det = self.data_det.append(det_df)
 
-            # We only consider for training frames with at least 2 nodes
-            frames = np.arange(np.max(self.data_det['frame'].values)+1)
-            nodes_per_frame = np.bincount(self.data_det['frame'].values)
-            self.frames_valid = frames[np.where(nodes_per_frame > 1)]
+            # We only consider for training frames with at least 2 nodes and with detection from at least more than one camera
+
+            frames_valid = []
+            for f in range(np.min(self.data_det['frame'].values), np.max(self.data_det['frame'].values)+1):
+                # print(f)
+                id_cam_unique = np.unique(self.data_det['id_cam'][self.data_det['frame'].values == f].values)
+                if len(id_cam_unique) > 1:
+                    frames_valid.append(f)
+
+            #OLD INCORRECT WAY
+            # frames = np.arange(np.max(self.data_det['frame'].values) + 1)
+            # nodes_per_frame = np.bincount(self.data_det['frame'].values)
+            # self.frames_valid = frames[np.where(nodes_per_frame > 1)]
+
+            self.frames_valid = np.asarray(frames_valid)
 
         else: #VALIDATION
             self.path = os.path.join(CONFIG['DATASET_VAL']['ROOT'], CONFIG['DATASET_VAL']['NAME'])
@@ -127,16 +150,26 @@ class EPFL_dataset(Dataset):
             for c in self.cameras:
                 seq_path = os.path.join(os.path.join(CONFIG['DATASET_VAL']['ROOT'],CONFIG['DATASET_VAL']['NAME'],c))
                 detections_file_path = os.path.join(seq_path, 'gt', 'gt.txt')
-                det_df = pd.read_csv(detections_file_path, header=None, sep=" ")
+                if 'AIC' in name:
+                    det_df = pd.read_csv(detections_file_path, header=None, sep=",")
+                    det_df = det_df[det_df.columns[:len(COL_NAMES_AIC)]]
+                    det_df.columns = COL_NAMES_AIC
+                    det_df['ymax'] = det_df['ymin'].values + det_df['height'].values
+                    det_df['xmax'] = det_df['xmin'].values + det_df['width'].values
+                    det_df['label'] = 'CAR'
+                    det_df['id_cam'] = int(c[-1:])
 
-                # Number and order of columns is always assumed to be the same
-                det_df = det_df[det_df.columns[:len(COL_NAMES_EPFL)]]
-                det_df.columns = COL_NAMES_EPFL
-                det_df = det_df[det_df['lost'] == 0]
-                det_df['xmin'] = det_df['xmin'].values + 1
-                det_df['width'] = (det_df['xmax'] - det_df['xmin']).values
-                det_df['height'] = (det_df['ymax'] - det_df['ymin']).values
-                det_df['id_cam'] = int(c[-1:])
+
+                else:  # rest of peeople datasets EPFL CAMPUS PETS
+                    det_df = pd.read_csv(detections_file_path, header=None, sep=" ")
+                    # Number and order of columns is always assumed to be the same
+                    det_df = det_df[det_df.columns[:len(COL_NAMES_EPFL)]]
+                    det_df.columns = COL_NAMES_EPFL
+                    det_df = det_df[det_df['lost'] == 0]
+                    det_df['xmin'] = det_df['xmin'].values + 1
+                    det_df['width'] = (det_df['xmax'] - det_df['xmin']).values
+                    det_df['height'] = (det_df['ymax'] - det_df['ymin']).values
+                    det_df['id_cam'] = int(c[-1:])
 
 
                 # Get ground-plane coordinates
@@ -146,6 +179,8 @@ class EPFL_dataset(Dataset):
 
                 homog_file = os.path.join(seq_path,'Homography.txt')
                 H = np.asarray(pd.read_csv(homog_file, header=None, sep="\t"))
+                if 'AIC' in name:
+                    H = np.linalg.inv(H)
 
                 xw, yw = utils.apply_homography_image_to_world(bb_mid_low_x, bb_mid_low_y, H)
 
@@ -161,10 +196,21 @@ class EPFL_dataset(Dataset):
 
                 self.data_det = self.data_det.append(det_df)
 
-            # We only consider for training frames with at least 2 nodes
-            frames = np.arange(np.max(self.data_det['frame'].values+1))
-            nodes_per_frame = np.bincount(self.data_det['frame'].values)
-            self.frames_valid = frames[np.where(nodes_per_frame > 1)]
+            # We only consider for training frames with at least 2 nodes and with detection from at least more than one camera
+
+            frames_valid = []
+            for f in range(np.min(self.data_det['frame'].values), np.max(self.data_det['frame'].values) + 1):
+                # print(f)
+                id_cam_unique = np.unique(self.data_det['id_cam'][self.data_det['frame'].values == f].values)
+                if len(id_cam_unique) > 1:
+                    frames_valid.append(f)
+
+            # OLD INCORRECT WAY
+            # frames = np.arange(np.max(self.data_det['frame'].values) + 1)
+            # nodes_per_frame = np.bincount(self.data_det['frame'].values)
+            # self.frames_valid = frames[np.where(nodes_per_frame > 1)]
+
+            self.frames_valid = np.asarray(frames_valid)
 
 
 

@@ -67,9 +67,19 @@ def compute_loss_acc(outputs, batch, mode):
         labels = batch.edge_labels.view(-1)
         if mode == 'train':
             # loss += F.binary_cross_entropy_with_logits(preds,labels,pos_weight=pos_weight)
-            loss += F.binary_cross_entropy_with_logits(preds, labels)
+            # loss += F.binary_cross_entropy_with_logits(preds, labels, reduction='none')
+
+            loss_per_sample = F.binary_cross_entropy_with_logits(preds, labels, reduction='none')
+            loss_class1 = torch.mean(loss_per_sample[labels == 1])
+            loss_class0 = torch.mean(loss_per_sample[labels == 0])
+            loss += F.binary_cross_entropy_with_logits(preds, labels, reduction='mean')
+
+
         else:
-            loss += F.binary_cross_entropy_with_logits(preds, labels)
+            loss_per_sample = F.binary_cross_entropy_with_logits(preds, labels, reduction='none')
+            loss_class1 = torch.mean(loss_per_sample[labels == 1])
+            loss_class0 = torch.mean(loss_per_sample[labels == 0])
+            loss += F.binary_cross_entropy_with_logits(preds, labels, reduction='mean')
 
 
         with torch.no_grad():
@@ -104,7 +114,7 @@ def compute_loss_acc(outputs, batch, mode):
 
 
 
-    return loss, precision_class1, precision_class0, precision_all
+    return loss, precision_class1, precision_class0, precision_all, loss_class1, loss_class0
 
 
 def compute_P_R_F(preds, labels):
@@ -140,6 +150,9 @@ def compute_P_R_F(preds, labels):
 def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_path,train_loss_in_history,train_prec1_in_history,train_prec0_in_history, train_prec_in_history, train_dataset, dataset_dir ):
 
     train_losses = utils.AverageMeter('losses', ':.4e')
+    train_losses1 = utils.AverageMeter('losses', ':.4e')
+    train_losses0 = utils.AverageMeter('losses', ':.4e')
+
     train_batch_time = utils.AverageMeter('batch_time', ':6.3f')
     train_precision_class1 = utils.AverageMeter('Precision_class1', ':6.2f')
     train_precision_class0 = utils.AverageMeter('Precision_class0', ':6.2f')
@@ -229,6 +242,11 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
 
                     points1 = np.concatenate((xws_1, yws_1), axis=1)
                     points2 = np.concatenate((xws_2, yws_2), axis=1)
+                    if points1.shape[0] == 0 or points1.shape[1] == 0:
+                        a=1
+
+                    if points2.shape[0] == 0 or points2.shape[1] == 0:
+                        a = 1
 
                     #Convert distances to meters
                     spatial_dist_g = torch.unsqueeze((torch.from_numpy(paired_distances(points1, points2))), dim=1).cuda()
@@ -365,12 +383,14 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
 
             outputs = mpn_model(data_batch)
 
-
-
             ########### Loss ###########
 
-            loss, precision1, precision0, precision = compute_loss_acc(outputs, data_batch,mode='train')
+            loss, precision1, precision0, precision,loss_class1, loss_class0 = compute_loss_acc(outputs, data_batch, mode='train')
             train_losses.update(loss.item(), CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'])
+            train_losses1.update(loss_class1.item(), CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'])
+            train_losses0.update(loss_class0.item(), CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'])
+
+
             train_precision_class1.update(np.sum(np.asarray([item for item in precision1])) / len(precision1),CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'] )
             train_precision_class0.update(np.sum(np.asarray([item for item in precision0])) / len(precision0),CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'] )
             train_precision.update(np.sum(np.asarray([item for item in precision])) / len(precision),CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'] )
@@ -404,8 +424,6 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
 
 
 
-
-
     plt.figure()
     plt.plot(train_loss_in_history, label='Loss')
 
@@ -423,11 +441,14 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
     plt.savefig(results_path + '/images/Training Precision per Iteration.pdf', bbox_inches='tight')
     plt.close()
 
-    return train_losses, train_precision_class1, train_precision_class0, train_loss_in_history,train_prec1_in_history,train_prec0_in_history,train_prec_in_history
+    return train_losses, train_losses1, train_losses0, train_precision_class1, train_precision_class0, train_loss_in_history,train_prec1_in_history,train_prec0_in_history,train_prec_in_history
 
 
 def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_loss_in_history,val_prec1_in_history,val_prec0_in_history,val_prec_in_history, val_dataset, dataset_dir):
     val_losses = utils.AverageMeter('losses', ':.4e')
+    val_losses1 = utils.AverageMeter('losses', ':.4e')
+    val_losses0 = utils.AverageMeter('losses', ':.4e')
+
     val_batch_time = utils.AverageMeter('batch_time', ':6.3f')
     val_precision_1 = utils.AverageMeter('Val prec class 1', ':6.2f')
     val_precision_0 = utils.AverageMeter('Val prec class 0', ':6.2f')
@@ -664,9 +685,13 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
                 ########### Loss ###########
 
                 # loss, acc_actives, acc_nonactives = compute_loss_acc(outputs, data_batch, mode = 'validate')
-                loss, precision1, precision0, precision = compute_loss_acc(outputs, data_batch, mode='validate')
+                loss, precision1, precision0, precision,loss_class1, loss_class0 = compute_loss_acc(outputs, data_batch, mode='validate')
 
                 val_losses.update(loss.item(), CONFIG['TRAINING']['BATCH_SIZE']['VAL'])
+                val_losses1.update(loss_class1.item(), CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'])
+                val_losses0.update(loss_class0.item(), CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'])
+
+
                 val_precision_1.update(np.sum(np.asarray([item for item in precision1])) / len(precision1),
                                        CONFIG['TRAINING']['BATCH_SIZE']['VAL'])
                 val_precision_0.update(np.sum(np.asarray([item for item in precision0])) / len(precision0),
@@ -716,7 +741,7 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
     plt.savefig(results_path + '/images/Validation Precision per Iteration.pdf', bbox_inches='tight')
     plt.close()
 
-    return val_losses, val_precision_1, val_precision_0,val_loss_in_history,val_prec1_in_history, val_prec0_in_history,val_prec_in_history
+    return val_losses, val_losses1, val_losses0, val_precision_1, val_precision_0,val_loss_in_history,val_prec1_in_history, val_prec0_in_history,val_prec_in_history
 
 
 def validate_REID(val_loader, cnn_model,CONFIG):

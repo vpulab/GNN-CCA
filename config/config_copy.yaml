@@ -1,10 +1,10 @@
-ID:  PRUEBA
+ID:  PRUEBA_pribando
 COMMENT: repeat  training, added  l2 normalization of reid emb and distances to meters
 MODE: GNN
 
 #FOR GNN
 DATASET_TRAIN:
-    NAME: [EPFL-Terrace, PETS2009_S2_L1_5_8, EPFL-Laboratory,CAMPUS_Garden1 ] # PETS2009_S2_L1_5_8, CAMPUS_Garden1
+    NAME: [EPFL-Terrace, PETS2009_S2_L1_5_8, EPFL-Laboratory,CAMPUS_Garden1] # PETS2009_S2_L1_5_8, CAMPUS_Garden1
     ROOT: /home/elg/Datasets/
     N_CLASSES:
     IMAUG: True

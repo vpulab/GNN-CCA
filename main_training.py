@@ -36,6 +36,10 @@ from models.resnet import resnet50_fc256, load_pretrained_weights
 from models.mpn import MOTMPNet
 from models.bdnet import bdnet,top_bdnet_neck_botdropfeat_doubot
 
+from libs.strongbaselinevehiclereid.modeling import multiheads_baseline
+from libs.strongbaselinevehiclereid.modeling import baseline
+from libs.strongbaselinevehiclereid import modeling
+
 from torch_geometric.utils import to_networkx
 import networkx as nx
 from skimage.io import imread
@@ -79,6 +83,7 @@ def load_model(CONFIG):
             device='cuda'
         )
         cnn_model = extractor.model
+        cnn_model.eval()
 
     elif cnn_arch == 'osnet_ms_c_d':
         extractor = FeatureExtractor(
@@ -87,6 +92,14 @@ def load_model(CONFIG):
             device='cuda'
         )
         cnn_model = extractor.model
+        cnn_model.eval()
+
+    elif cnn_arch == 'resnext101_cars':
+
+        cnn_model = baseline.build_model('baseline_multiheads', 40)
+
+        multiheads_baseline.Baseline.load_pretrained_weights(cnn_model, CONFIG['CNN_MODEL']['model_weights_path'][cnn_arch])
+        cnn_model.eval()
 
 
 
@@ -115,7 +128,6 @@ def my_collate(batch):
     # bboxes, frames, ids, ids_cam
 
     return [bboxes_batches, df_batches,max_dist] #, path]#[bboxes_batches, frames_batches, ids_batches, ids_cam_batches]
-
 
 
 global USE_CUDA, CONFIG
@@ -197,7 +209,7 @@ else:
 
 # print("SHUFFLE FALSE")
 
-val_dataset = datasets.EPFL_dataset([], 'validation', CONFIG, cnn_model)
+val_dataset = datasets.EPFL_dataset(CONFIG['DATASET_VAL']['NAME'], 'validation', CONFIG, cnn_model)
 validation_loader = torch.utils.data.DataLoader(val_dataset, batch_size=CONFIG['TRAINING']['BATCH_SIZE']['VAL'], shuffle=False,
                                                num_workers=CONFIG['DATALOADER']['NUM_WORKERS'], collate_fn=my_collate,pin_memory=CONFIG['DATALOADER']['PIN_MEMORY'])
 #LOAD MPN NETWORK#
@@ -246,10 +258,16 @@ elif CONFIG['TRAINING']['OPTIMIZER']['type']  == 'SGD':
 
 # avg per epoch
 training_loss_avg = []
+training_loss_avg_1 = []
+training_loss_avg_0 = []
+
 training_precision_1_avg = []
 training_precision_0_avg = []
 
 val_loss_avg = []
+val_loss_avg_1 = []
+val_loss_avg_0 = []
+
 val_precision_1_avg = []
 val_precision_0_avg = []
 val_prec_in_history = []
@@ -274,17 +292,25 @@ for epoch in range(0, CONFIG['TRAINING']['EPOCHS']):
     epoch_start = time.time()
     list_lr.append(optimizer.param_groups[0]['lr'])
 
-    train_losses,train_precision_1, train_precision_0,train_loss_in_history, train_prec1_in_history,train_prec0_in_history,train_prec_in_history = \
+    train_losses,train_losses1, train_losses0, train_precision_1, train_precision_0,train_loss_in_history, train_prec1_in_history,train_prec0_in_history,train_prec_in_history = \
         train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_path,train_loss_in_history,train_prec1_in_history,train_prec0_in_history,train_prec_in_history,train_dataset,dataset_dir)
 
     training_loss_avg.append(train_losses.avg)
+    training_loss_avg_1.append(train_losses1.avg)
+    training_loss_avg_0.append(train_losses0.avg)
+
     training_precision_1_avg.append(train_precision_1.avg)
     training_precision_0_avg.append(train_precision_0.avg)
 
-    val_losses, val_precision_1, val_precision_0,val_loss_in_history,val_prec1_in_history,val_prec0_in_history,val_prec_in_history = \
+    val_losses, val_losses1, val_losses0, val_precision_1, val_precision_0,val_loss_in_history,val_prec1_in_history,val_prec0_in_history,val_prec_in_history = \
         validate(CONFIG,validation_loader, cnn_model, mpn_model, results_path,epoch,val_loss_in_history,val_prec1_in_history,val_prec0_in_history,val_prec_in_history,val_dataset,dataset_dir )
 
     val_loss_avg.append(val_losses.avg)
+    val_loss_avg_1.append(val_losses1.avg)
+    val_loss_avg_0.append(val_losses0.avg)
+
+
+
     val_precision_1_avg.append(val_precision_1.avg)
     val_precision_0_avg.append(val_precision_0.avg)
 
@@ -320,9 +346,16 @@ for epoch in range(0, CONFIG['TRAINING']['EPOCHS']):
     plt.legend()
     plt.savefig(results_path + '/images/Precision Per Epoch.pdf', bbox_inches='tight')
     plt.close()
+
+
     plt.figure()
-    plt.plot(training_loss_avg, label='Training loss')
-    plt.plot(val_loss_avg,  label='Validation loss')
+    plt.plot(training_loss_avg, c='red',label='Training loss')
+    plt.plot(training_loss_avg_1, '--',c='firebrick' ,label='Training loss 1')
+    plt.plot(training_loss_avg_0, '--',c = 'indianred', label='Training loss 0')
+    plt.plot(val_loss_avg, c='green', label='Validation loss')
+    plt.plot(val_loss_avg_1,'--', c='darkgreen',label='Validation loss 1')
+    plt.plot(val_loss_avg_0, '--',c='limegreen',label='Validation loss 0')
+
     plt.ylabel('Loss'), plt.xlabel('Epoch')
     plt.legend()
     plt.savefig(results_path + '/images/Loss per Epoch.pdf', bbox_inches='tight')
