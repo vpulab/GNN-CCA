@@ -131,7 +131,6 @@ def my_collate(batch):
 
 
 global USE_CUDA, CONFIG
-
 USE_CUDA = torch.cuda.is_available()
 
 date = date = str(time.localtime().tm_year) + '-' + str(time.localtime().tm_mon).zfill(2) + '-' + str(
@@ -356,6 +355,14 @@ for epoch in range(0, CONFIG['TRAINING']['EPOCHS']):
     plt.plot(val_loss_avg_1,'--', c='darkgreen',label='Validation loss 1')
     plt.plot(val_loss_avg_0, '--',c='limegreen',label='Validation loss 0')
 
+    plt.ylabel('Loss'), plt.xlabel('Epoch')
+    plt.legend()
+    plt.savefig(results_path + '/images/ All Losses per Epoch.pdf', bbox_inches='tight')
+    plt.close()
+
+    plt.figure()
+    plt.plot(training_loss_avg, c='red', label='Training loss')
+    plt.plot(val_loss_avg, c='green', label='Validation loss')
     plt.ylabel('Loss'), plt.xlabel('Epoch')
     plt.legend()
     plt.savefig(results_path + '/images/Loss per Epoch.pdf', bbox_inches='tight')

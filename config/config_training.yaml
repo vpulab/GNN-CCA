@@ -1,4 +1,4 @@
-ID:  pruebaGNN_vehicles_AIC_resnext101_Adam0001_BNcls_SEP_LOSSES_
+ID:  GNN_vehicles_AIC_resnext101_Adam0001_BNcls_SEP_LOSSES_POS_WEIGHT_Imaug_
 COMMENT: repeat  training, added  l2 normalization of reid emb and distances to meters
 MODE: GNN
 
@@ -32,6 +32,9 @@ DATASET_VAL:
     STD: [0.229, 0.224, 0.225]
     ZERO_PADDING: False
 
+POSITIVE_WEIGHT:
+  AIC20-S01: 9
+
 CONV_TO_M: # dist/CONV_TO_M to covert to meters
   PETS2009_S2_L1_5_8: 26.56
   EPFL-Laboratory: 44.23
@@ -41,10 +44,12 @@ CONV_TO_M: # dist/CONV_TO_M to covert to meters
   AIC20-S02: 0.00001
 
 TRAINING:
+    LOSS:
+      WEIGHTED: True
     BATCH_SIZE:
         TRAIN: 16
         VAL: 15
-    EPOCHS: 50
+    EPOCHS: 100
     OPTIMIZER:
 #      Adam 0.001
       type: Adam

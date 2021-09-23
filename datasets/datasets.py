@@ -118,7 +118,8 @@ class EPFL_dataset(Dataset):
                 # print(f)
                 id_cam_unique = np.unique(self.data_det['id_cam'][self.data_det['frame'].values == f].values)
                 if len(id_cam_unique) > 1:
-                    frames_valid.append(f)
+                    if np.max(np.bincount(self.data_det['id'][self.data_det['frame'].values == f].values)) > 1: # at least 1 car viewed from 2 cameras (at least)
+                        frames_valid.append(f)
 
             #OLD INCORRECT WAY
             # frames = np.arange(np.max(self.data_det['frame'].values) + 1)
@@ -203,7 +204,8 @@ class EPFL_dataset(Dataset):
                 # print(f)
                 id_cam_unique = np.unique(self.data_det['id_cam'][self.data_det['frame'].values == f].values)
                 if len(id_cam_unique) > 1:
-                    frames_valid.append(f)
+                    if np.max(np.bincount(self.data_det['id'][self.data_det['frame'].values == f].values)) > 1: # at least 1 car viewed from 2 cameras (at least)
+                        frames_valid.append(f)
 
             # OLD INCORRECT WAY
             # frames = np.arange(np.max(self.data_det['frame'].values) + 1)

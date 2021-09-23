@@ -45,18 +45,18 @@ import utils
 list_cam_colors = list(['royalblue', 'darkorange','green','firebrick'])
 
 
-def compute_loss_acc(outputs, batch, mode):
+def compute_loss_acc(outputs, batch, CONFIG,  mode):
+    # global num_edges, num_edges1
+    # num_edges1 += np.int(positive_vals.cpu())
+    # num_edges += np.int(labels.shape[0])
+
     # Define Balancing weight
-    positive_vals = batch.edge_labels.sum()
-
-    if positive_vals:
-        pos_weight = (batch.edge_labels.shape[0] - positive_vals) / positive_vals
-
-    else:  # If there are no positives labels, avoid dividing by zero
-        pos_weight = 0
+    labels = batch.edge_labels.view(-1)
 
     # Compute Weighted BCE:
     loss = 0
+    loss_class1 = 0
+    loss_class0 = 0
     precision_class1 = list()
     precision_class0 = list()
     precision_all = list()
@@ -64,21 +64,26 @@ def compute_loss_acc(outputs, batch, mode):
     num_steps = len(outputs['classified_edges'])
     for step in range(num_steps):
         preds = outputs['classified_edges'][step].view(-1)
-        labels = batch.edge_labels.view(-1)
-        if mode == 'train':
-            # loss += F.binary_cross_entropy_with_logits(preds,labels,pos_weight=pos_weight)
-            # loss += F.binary_cross_entropy_with_logits(preds, labels, reduction='none')
 
-            loss_per_sample = F.binary_cross_entropy_with_logits(preds, labels, reduction='none')
-            loss_class1 = torch.mean(loss_per_sample[labels == 1])
-            loss_class0 = torch.mean(loss_per_sample[labels == 0])
-            loss += F.binary_cross_entropy_with_logits(preds, labels, reduction='mean')
+        if mode == 'train':
+
+            if CONFIG['TRAINING']['LOSS']['WEIGHTED']:
+                loss_per_sample = F.binary_cross_entropy_with_logits(preds, labels, reduction='none', pos_weight=torch.tensor(CONFIG['POSITIVE_WEIGHT'][CONFIG['DATASET_TRAIN']['NAME'][0]]))
+                loss += F.binary_cross_entropy_with_logits(preds, labels, reduction='mean', pos_weight=torch.tensor(CONFIG['POSITIVE_WEIGHT'][CONFIG['DATASET_TRAIN']['NAME'][0]]))
+            else:
+                loss_per_sample = F.binary_cross_entropy_with_logits(preds, labels, reduction='none')
+                loss += F.binary_cross_entropy_with_logits(preds, labels, reduction='mean')
+
+            loss_class1 += torch.mean(loss_per_sample[labels == 1])
+            loss_class0 += torch.mean(loss_per_sample[labels == 0])
+
 
 
         else:
             loss_per_sample = F.binary_cross_entropy_with_logits(preds, labels, reduction='none')
-            loss_class1 = torch.mean(loss_per_sample[labels == 1])
-            loss_class0 = torch.mean(loss_per_sample[labels == 0])
+            loss_class1 += torch.mean(loss_per_sample[labels == 1])
+            loss_class0 += torch.mean(loss_per_sample[labels == 0])
+
             loss += F.binary_cross_entropy_with_logits(preds, labels, reduction='mean')
 
 
@@ -109,9 +114,6 @@ def compute_loss_acc(outputs, batch, mode):
                 precision_all.append(0)
             else:
                 precision_all.append((sum_successes / len(labels) )* 100.0)
-
-
-
 
 
     return loss, precision_class1, precision_class0, precision_all, loss_class1, loss_class0
@@ -162,7 +164,7 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
 
     for i, data in enumerate(train_loader):
 
-        if i >=0:
+        if i >= 0:
 
             start_time = time.time()
 
@@ -242,11 +244,6 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
 
                     points1 = np.concatenate((xws_1, yws_1), axis=1)
                     points2 = np.concatenate((xws_2, yws_2), axis=1)
-                    if points1.shape[0] == 0 or points1.shape[1] == 0:
-                        a=1
-
-                    if points2.shape[0] == 0 or points2.shape[1] == 0:
-                        a = 1
 
                     #Convert distances to meters
                     spatial_dist_g = torch.unsqueeze((torch.from_numpy(paired_distances(points1, points2))), dim=1).cuda()
@@ -385,7 +382,7 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
 
             ########### Loss ###########
 
-            loss, precision1, precision0, precision,loss_class1, loss_class0 = compute_loss_acc(outputs, data_batch, mode='train')
+            loss, precision1, precision0, precision,loss_class1, loss_class0 = compute_loss_acc(outputs, data_batch,CONFIG, mode='train')
             train_losses.update(loss.item(), CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'])
             train_losses1.update(loss_class1.item(), CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'])
             train_losses0.update(loss_class0.item(), CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'])
@@ -457,10 +454,13 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
     mpn_model.eval()
     cnn_model.eval()
 
+    # global num_edges, num_edges1
+    # num_edges = 0
+    # num_edges1 = 0
 
     with torch.no_grad():
         for i, data in enumerate(val_loader):
-            if i >= 0:
+            if i >=0:
 
                 start_time = time.time()
 
@@ -685,7 +685,7 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
                 ########### Loss ###########
 
                 # loss, acc_actives, acc_nonactives = compute_loss_acc(outputs, data_batch, mode = 'validate')
-                loss, precision1, precision0, precision,loss_class1, loss_class0 = compute_loss_acc(outputs, data_batch, mode='validate')
+                loss, precision1, precision0, precision,loss_class1, loss_class0 = compute_loss_acc(outputs, data_batch, CONFIG, mode='validate')
 
                 val_losses.update(loss.item(), CONFIG['TRAINING']['BATCH_SIZE']['VAL'])
                 val_losses1.update(loss_class1.item(), CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'])
