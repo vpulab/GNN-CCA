@@ -173,8 +173,6 @@ def compute_rounding(graph_obj, edges_out, probs,predicted_active_edges):
 
     return new_predictions
 
-
-
 def visualize(h, color, edge_labels = None,edge_index =None ,node_label = None,epoch=None, loss=None):
     plt.figure(figsize=(7,7))
     plt.xticks([])
@@ -211,7 +209,6 @@ def visualize(h, color, edge_labels = None,edge_index =None ,node_label = None,e
     plt.show(block=False)
     a=1
 
-
 def apply_homography_image_to_world(xi, yi, H_image_to_world):
     # Spatial vector xi, yi, 1
     S = np.array([xi, yi, 1]).reshape(3, 1)
@@ -227,7 +224,6 @@ def apply_homography_image_to_world(xi, yi, H_image_to_world):
     xw = (prj[0] / prj[2]).item() # latitude
     yw = (prj[1] / prj[2]).item() # longitude
     return xw, yw
-
 
 def apply_homography_world_to_image(xi, yi, H_world_to_image):
     # Spatial vector xi, yi, 1
@@ -271,12 +267,12 @@ class FocalLoss_binary(nn.Module):
     Class definition for the Focal Loss. Extracted from the paper Focal Loss for Dense Object detection by FAIR.
     """
 
-    def __init__(self, focusing_param=5, balance_param=0.25):
+    def __init__(self, focusing_param=5, balance_param=0.9, reduction = 'mean'):
         super(FocalLoss_binary, self).__init__()
 
         self.focusing_param = focusing_param
         self.balance_param = balance_param
-        self.cross_entropy = nn.BCEWithLogitsLoss()
+        self.cross_entropy = nn.BCEWithLogitsLoss(reduction=reduction)
 
     def forward(self, output, target):
         """
@@ -296,7 +292,6 @@ class FocalLoss_binary(nn.Module):
         balanced_focal_loss = self.balance_param * focal_loss
 
         return balanced_focal_loss
-
 
 def compute_SCC_and_Clusters(G,n_nodes):
     sets = [c for c in sorted(nx.strongly_connected_components(G), key=len, reverse=False)]
@@ -321,7 +316,6 @@ def compute_SCC_and_Clusters(G,n_nodes):
         cluster = cluster + 1
     #
     return ID_pred, n_components_pred
-
 
 def disjoint_big_clusters(ID_pred, predictions, preds_prob, edge_list,data_batch,predicted_act_edges,G):
     # Count how many items in each class, then look which cluster label is the one with more than 4 elements (# cameras)
@@ -409,7 +403,6 @@ def remove_edges_single_direction(active_edges, predictions, edge_list):
 
 
     return new_predictions, new_predicted_active_edges
-
 
 def save_checkpoint(state, is_best, path, filename):
     torch.save(state, path + '/files/' + filename + '_latest.pth.tar')

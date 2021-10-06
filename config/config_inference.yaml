@@ -1,4 +1,4 @@
-ID: prueba_eval_
+ID: GNNeval_AICS02_resnext101
 COMMENT: nodereid = embed reid  repetido dos veces
 MODE: GNN_eval #GNN, REID, GNN_eval, eval_RANK, REID_th
 
@@ -6,7 +6,9 @@ MODE: GNN_eval #GNN, REID, GNN_eval, eval_RANK, REID_th
 ROUNDING: True
 CUTTING: True
 DISJOINT: True
-PRETRAINED_GNN_MODEL: /home/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_trainPETSyTerrace_resnet_app_dist_distx_disty_erase0.252021-07-09 10:42:28/files/GNN_trainPETSyTerrace_resnet_app_dist_distx_disty_erase0.25_best.pth.tar
+PRETRAINED_GNN_MODEL: /home/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_vehicles_AIC_resnext101_SGD0001_BNcls_SEP_LOSSES_POS_WEIGHT_decay25_2021-09-23 15:58:38/files/GNN_vehicles_AIC_resnext101_SGD0001_BNcls_SEP_LOSSES_POS_WEIGHT_decay25__latest.pth.tar
+
+#  /home/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_vehicles_AIC_resnext101_SGD0001_BNcls_SEP_LOSSES_POS_WEIGHT_decay25_2021-09-23 15:58:38/files/GNN_vehicles_AIC_resnext101_SGD0001_BNcls_SEP_LOSSES_POS_WEIGHT_decay25__latest.pth.tar
 
 #  /home/elg/Repositories/GNN-Cross-Camera-Association/results/train_terr_not_attacing_fc6_edgeupdate2021-04-24 21:12:44/files/train_terr_not_attacing_fc6_edgeupdate_best.pth.tar
 #  /home/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_trainPETSyTerrace_resnet_app_dist_distx_disty_erase0.252021-07-09 10:42:28/files/GNN_trainPETSyTerrace_resnet_app_dist_distx_disty_erase0.25_best.pth.tar
@@ -26,12 +28,8 @@ PRETRAINED_GNN_MODEL: /home/elg/Repositories/GNN-Cross-Camera-Association/result
 
 RANK: 2
 
-#FOR GNN
 DATASET_TRAIN:
-    NAME: EPFL-Terrace
-    ROOT: /home/elg/Datasets/
-    N_CLASSES:
-    IMAUG: False
+    IMAUG: True
     RESIZE:
       resnet50: [128, 64]
       bdnet_market: [384, 128]
@@ -39,15 +37,21 @@ DATASET_TRAIN:
       osnet_market: [256, 128]
       osnet_ms_c_d: [256, 128]
       resnext101_cars: [320, 320]
-
-    CROP:
-    FRAME_SAMPLING:
     MEAN: [0.485, 0.456, 0.406]
     STD: [0.229, 0.224, 0.225]
-    ZERO_PADDING: False
+
+CONV_TO_M: # dist/CONV_TO_M to covert to meters
+  PETS2009_S2_L1_5_8: 26.56
+  EPFL-Laboratory: 44.23
+  EPFL-Terrace: 50.83
+  CAMPUS_Garden1: 85.23
+  AIC20-S01: 0.00001
+  AIC20-S02: 0.00001
+
+#FOR GNN
 
 DATASET_VAL:
-    NAME: EPFL-Laboratory
+    NAME: AIC20-S02
     ROOT: /home/elg/Datasets/
     N_CLASSES:
     CROP:
@@ -59,19 +63,7 @@ DATASET_VAL:
 
 TRAINING:
     BATCH_SIZE:
-        TRAIN: 16
         VAL: 1
-    EPOCHS: 100
-    OPTIMIZER:
-      type: Adam
-      args:
-        lr: 0.001
-        weight_decay: 0.0001
-#    LR_SCHEDULER:
-#      type:
-#      args:
-#        step_size: 5
-#        gamma: 0.5
 
     ONLY_APPEARANCE: False
     ONLY_DIST: False

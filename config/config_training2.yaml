@@ -1,4 +1,4 @@
-ID:  GNN_vehicles_AIC_resnext101_SGD0001_BNcls_SEP_LOSSES_POS_WEIGHT_
+ID:  GNN_vehicles_AIC_resnext101_SGD0001_BNcls_POS_WEIHTED_decay80_
 COMMENT: repeat  training, added  l2 normalization of reid emb and distances to meters
 MODE: GNN
 
@@ -45,22 +45,22 @@ CONV_TO_M: # dist/CONV_TO_M to covert to meters
 
 TRAINING:
     LOSS:
-      WEIGHTED: True
+      NAME: BCE_weighted #Focal BCE_weighted  BCE
     BATCH_SIZE:
         TRAIN: 16
         VAL: 15
-    EPOCHS: 100
+    EPOCHS: 150
     OPTIMIZER:
 #      Adam 0.001
       type: SGD
       args:
-        lr: 0.001
+        lr: 0.0001
         weight_decay: 1.0e-4 #number of epochs
         momentum: 0.9
     LR_SCHEDULER:
       type:
       args:
-        step_size: 10
+        step_size: 80
         gamma: 0.1
 
     WARMUP:

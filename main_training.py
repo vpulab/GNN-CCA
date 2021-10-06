@@ -254,6 +254,19 @@ elif CONFIG['TRAINING']['OPTIMIZER']['type']  == 'SGD':
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = CONFIG['TRAINING']['LR_SCHEDULER']['args']['step_size'],
                                                 gamma = CONFIG['TRAINING']['LR_SCHEDULER']['args']['gamma'])
 
+# TRAINING CRITERIONS
+if CONFIG['TRAINING']['LOSS']['NAME'] == 'Focal':
+    criterion = utils.FocalLoss_binary(reduction = 'mean')
+    criterion_no_reduction = utils.FocalLoss_binary(reduction = 'none')
+
+elif CONFIG['TRAINING']['LOSS']['NAME'] == 'BCE_weighted':
+    criterion = nn.BCEWithLogitsLoss(reduction='mean', pos_weight=torch.tensor(CONFIG['POSITIVE_WEIGHT'][CONFIG['DATASET_TRAIN']['NAME'][0]]))
+    criterion_no_reduction = nn.BCEWithLogitsLoss(reduction='none', pos_weight=torch.tensor(CONFIG['POSITIVE_WEIGHT'][CONFIG['DATASET_TRAIN']['NAME'][0]]))
+
+elif CONFIG['TRAINING']['LOSS']['NAME'] == 'BCE':
+    criterion = nn.BCEWithLogitsLoss(reduction='mean')
+    criterion_no_reduction = nn.BCEWithLogitsLoss(reduction='none')
+
 
 # avg per epoch
 training_loss_avg = []
@@ -291,8 +304,10 @@ for epoch in range(0, CONFIG['TRAINING']['EPOCHS']):
     epoch_start = time.time()
     list_lr.append(optimizer.param_groups[0]['lr'])
 
-    train_losses,train_losses1, train_losses0, train_precision_1, train_precision_0,train_loss_in_history, train_prec1_in_history,train_prec0_in_history,train_prec_in_history = \
-        train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_path,train_loss_in_history,train_prec1_in_history,train_prec0_in_history,train_prec_in_history,train_dataset,dataset_dir)
+    train_losses,train_losses1, train_losses0, train_precision_1, train_precision_0,train_loss_in_history,\
+    train_prec1_in_history,train_prec0_in_history,train_prec_in_history = \
+        train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_path,train_loss_in_history, \
+              train_prec1_in_history,train_prec0_in_history,train_prec_in_history,train_dataset,dataset_dir, criterion, criterion_no_reduction)
 
     training_loss_avg.append(train_losses.avg)
     training_loss_avg_1.append(train_losses1.avg)
@@ -302,7 +317,8 @@ for epoch in range(0, CONFIG['TRAINING']['EPOCHS']):
     training_precision_0_avg.append(train_precision_0.avg)
 
     val_losses, val_losses1, val_losses0, val_precision_1, val_precision_0,val_loss_in_history,val_prec1_in_history,val_prec0_in_history,val_prec_in_history = \
-        validate(CONFIG,validation_loader, cnn_model, mpn_model, results_path,epoch,val_loss_in_history,val_prec1_in_history,val_prec0_in_history,val_prec_in_history,val_dataset,dataset_dir )
+        validate(CONFIG,validation_loader, cnn_model, mpn_model, results_path,epoch,val_loss_in_history,val_prec1_in_history,val_prec0_in_history,val_prec_in_history,
+                 val_dataset,dataset_dir )
 
     val_loss_avg.append(val_losses.avg)
     val_loss_avg_1.append(val_losses1.avg)
