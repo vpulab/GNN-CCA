@@ -1,4 +1,4 @@
-ID:  GNN_C5_bdnetC_SGD0001_BNcls_warmup5_decay10_onlyapp
+ID:  GNN_vehicles_AIC_resnext101_Adam0001_BNcls_SEP_LOSSES_
 COMMENT: repeat  training, added  l2 normalization of reid emb and distances to meters
 MODE: GNN
 
@@ -8,15 +8,17 @@ PRETRAINED_GNN_MODEL:
 
 #FOR GNN
 DATASET_TRAIN:
-    NAME: [PETS2009_S2_L1_5_8, EPFL-Terrace] # PETS2009_S2_L1_5_8 CAMPUS_Garden1
+    NAME: [AIC20-S01] # PETS2009_S2_L1_5_8 CAMPUS_Garden1
     ROOT: /home/elg/Datasets/
-    IMAUG: False
+    IMAUG: True
     RESIZE:
       resnet50: [128, 64]
       bdnet_market: [384, 128]
       bdnet_cuhk: [384, 128]
       osnet_market: [256, 128]
       osnet_ms_c_d: [256, 128]
+      resnext101_cars: [320, 320]
+
     CROP:
     FRAME_SAMPLING:
     MEAN: [0.485, 0.456, 0.406]
@@ -24,26 +26,33 @@ DATASET_TRAIN:
     ZERO_PADDING: False
 
 DATASET_VAL:
-    NAME: EPFL-Laboratory
+    NAME: AIC20-S02
     ROOT: /home/elg/Datasets/
     MEAN: [0.485, 0.456, 0.406]
     STD: [0.229, 0.224, 0.225]
     ZERO_PADDING: False
+
+POSITIVE_WEIGHT:
+  AIC20-S01: 9
 
 CONV_TO_M: # dist/CONV_TO_M to covert to meters
   PETS2009_S2_L1_5_8: 26.56
   EPFL-Laboratory: 44.23
   EPFL-Terrace: 50.83
   CAMPUS_Garden1: 85.23
+  AIC20-S01: 0.00001
+  AIC20-S02: 0.00001
 
 TRAINING:
+    LOSS:
+      WEIGHTED: False
     BATCH_SIZE:
         TRAIN: 16
-        VAL: 26
-    EPOCHS: 50
+        VAL: 15
+    EPOCHS: 100
     OPTIMIZER:
 #      Adam 0.001
-      type: SGD
+      type: Adam
       args:
         lr: 0.001
         weight_decay: 1.0e-4 #number of epochs
@@ -59,17 +68,18 @@ TRAINING:
       NUM_EPOCHS: 5
       LR: 0
 
-    ONLY_APPEARANCE: True
+    ONLY_APPEARANCE: False
     ONLY_DIST: False
 
 CNN_MODEL:
-    arch: bdnet_cuhk #resnet50 , bdnet_market, bdnet_cuhk, osnet_market, osnet_ms_c_d
+    arch: resnext101_cars #resnet50 , bdnet_market, bdnet_cuhk, osnet_market, osnet_ms_c_d,resnext101_cars
     model_weights_path:
         resnet50: ./trained_models/reid/resnet50_market_cuhk_duke.tar-232
         bdnet_market: ./trained_models/top-dropblock/de00143e-market-model.pth.tar-400
         bdnet_cuhk: ./trained_models/top-dropblock/fbdaf3bb-cuhk-det-model.pth.tar-400
         osnet_market: ./trained_models/osnet/osnet_x1_0_market_256x128_amsgrad_ep150_stp60_lr0.0015_b64_fb10_softmax_labelsmooth_flip.pth
         osnet_ms_c_d:  ./trained_models/osnet/osnet_ms_d_c.pth.tar
+        resnext101_cars: ./trained_models/vehicle-reid/resnext_101_multihead.pth
     L2norm: True
 
 DATALOADER:
@@ -131,6 +141,14 @@ GRAPH_NET_PARAMS:
 
         #NODE FEATURES ENCODER
         node_in_dim: 512
+        #node_fc_dims: [512, 128]
+        node_fc_dims: [ 128 ]
+        node_out_dim: 32
+        dropout_p: 0
+        use_batchnorm: False
+      resnext101_cars:
+        #NODE FEATURES ENCODER
+        node_in_dim: 2048
         #node_fc_dims: [512, 128]
         node_fc_dims: [ 128 ]
         node_out_dim: 32

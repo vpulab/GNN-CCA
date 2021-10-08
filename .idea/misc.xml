@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="ProjectRootManager" version="2" project-jdk-name="Remote Python 3.6.10 (sftp://elg@192.168.23.146:22/opt/miniconda2/envs/mot_neural_solver/bin/python)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.6 (mot_neural_solver)" project-jdk-type="Python SDK" />
 </project>

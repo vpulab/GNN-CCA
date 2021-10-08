@@ -19,6 +19,8 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from torch_scatter import scatter_add
 from torch.nn import functional as F
+import torch.nn as nn
+
 
 
 
@@ -171,67 +173,6 @@ def compute_rounding(graph_obj, edges_out, probs,predicted_active_edges):
 
     return new_predictions
 
-class GreedyProjector:
-    """
-    Applies the greedy rounding scheme described in https://arxiv.org/pdf/1912.07515.pdf, Appending B.1
-    """
-    def __init__(self, full_graph):
-        self.final_graph = full_graph.graph_obj
-        self.num_nodes = full_graph.graph_obj.num_nodes
-
-    def project(self):
-        round_preds = (self.final_graph.edge_preds > 0.5).float()
-
-        self.constr_satisf_rate, flow_in, flow_out =compute_constr_satisfaction_rate(graph_obj = self.final_graph,
-                                                                                     edges_out = round_preds,
-                                                                                     undirected_edges = False,
-                                                                                     return_flow_vals = True)
-        # Determine the set of constraints that are violated
-        nodes_names = torch.arange(self.num_nodes).to(flow_in.device)
-        in_type = torch.zeros(self.num_nodes).to(flow_in.device)
-        out_type = torch.ones(self.num_nodes).to(flow_in.device)
-
-        flow_in_info = torch.stack((nodes_names.float(), in_type.float())).t()
-        flow_out_info = torch.stack((nodes_names.float(), out_type.float())).t()
-        all_violated_constr = torch.cat((flow_in_info, flow_out_info))
-        mask = torch.cat((flow_in > 1, flow_out > 1))
-
-        # Sort violated constraints by the value of thei maximum pred value among incoming / outgoing edges
-        all_violated_constr = all_violated_constr[mask]
-        vals, sorted_ix = torch.sort(all_violated_constr[:, 1], descending=True)
-        all_violated_constr = all_violated_constr[sorted_ix]
-
-        # Iterate over violated constraints.
-        for viol_constr in all_violated_constr:
-            node_name, viol_type = viol_constr
-
-            # Determine the set of incoming / outgoing edges
-            mask = torch.zeros(self.num_nodes).bool()
-            mask[node_name.int()] = True
-            if viol_type == 0:  # Flow in violation
-                mask = mask[self.final_graph.edge_index[1]]
-
-            else:  # Flow Out violation
-                mask = mask[self.final_graph.edge_index[0]]
-            flow_edges_ix = torch.where(mask)[0]
-
-            # If the constraint is still violated, set to 1 the edge with highest score, and set the rest to 0
-            if round_preds[flow_edges_ix].sum() > 1:
-                max_pred_ix = max(flow_edges_ix, key=lambda ix: self.final_graph.edge_preds[ix]*round_preds[ix]) # Multiply for round_preds so that if the edge has been set to 0
-                                                                                                                 # it can not be set back to 1
-                round_preds[mask] = 0
-                round_preds[max_pred_ix] = 1
-
-        # Assert that there are no constraint violations
-        assert scatter_add(round_preds, self.final_graph.edge_index[1], dim_size=self.num_nodes).max() <= 1
-        assert scatter_add(round_preds, self.final_graph.edge_index[0], dim_size=self.num_nodes).max() <= 1
-
-        # return round_preds, constr_satisf_rate
-        self.final_graph.edge_preds = round_preds
-
-
-
-
 def visualize(h, color, edge_labels = None,edge_index =None ,node_label = None,epoch=None, loss=None):
     plt.figure(figsize=(7,7))
     plt.xticks([])
@@ -268,7 +209,6 @@ def visualize(h, color, edge_labels = None,edge_index =None ,node_label = None,e
     plt.show(block=False)
     a=1
 
-
 def apply_homography_image_to_world(xi, yi, H_image_to_world):
     # Spatial vector xi, yi, 1
     S = np.array([xi, yi, 1]).reshape(3, 1)
@@ -284,7 +224,6 @@ def apply_homography_image_to_world(xi, yi, H_image_to_world):
     xw = (prj[0] / prj[2]).item() # latitude
     yw = (prj[1] / prj[2]).item() # longitude
     return xw, yw
-
 
 def apply_homography_world_to_image(xi, yi, H_world_to_image):
     # Spatial vector xi, yi, 1
@@ -323,6 +262,36 @@ class AverageMeter(object):
         fmtstr = '{name} {val' + self.fmt + '} ({avg' + self.fmt + '})'
         return fmtstr.format(**self.__dict__)
 
+class FocalLoss_binary(nn.Module):
+    """
+    Class definition for the Focal Loss. Extracted from the paper Focal Loss for Dense Object detection by FAIR.
+    """
+
+    def __init__(self, focusing_param=5, balance_param=0.9, reduction = 'mean'):
+        super(FocalLoss_binary, self).__init__()
+
+        self.focusing_param = focusing_param
+        self.balance_param = balance_param
+        self.cross_entropy = nn.BCEWithLogitsLoss(reduction=reduction)
+
+    def forward(self, output, target):
+        """
+        Computes the focal loss for a classification problem (scene classification)
+        :param output: Output obtained by the network
+        :param target: Ground-truth labels
+        :return: Focal loss
+        """
+        # Compute the regular cross entropy between the output and the target
+        logpt = - self.cross_entropy(output,target)
+        # Compute pt
+        pt = torch.exp(logpt)
+
+        # Compute focal loss
+        focal_loss = -((1 - pt) ** self.focusing_param) * logpt
+        # Apply weighting factor to obtain balanced focal loss
+        balanced_focal_loss = self.balance_param * focal_loss
+
+        return balanced_focal_loss
 
 def compute_SCC_and_Clusters(G,n_nodes):
     sets = [c for c in sorted(nx.strongly_connected_components(G), key=len, reverse=False)]
@@ -347,7 +316,6 @@ def compute_SCC_and_Clusters(G,n_nodes):
         cluster = cluster + 1
     #
     return ID_pred, n_components_pred
-
 
 def disjoint_big_clusters(ID_pred, predictions, preds_prob, edge_list,data_batch,predicted_act_edges,G):
     # Count how many items in each class, then look which cluster label is the one with more than 4 elements (# cameras)
@@ -435,7 +403,6 @@ def remove_edges_single_direction(active_edges, predictions, edge_list):
 
 
     return new_predictions, new_predicted_active_edges
-
 
 def save_checkpoint(state, is_best, path, filename):
     torch.save(state, path + '/files/' + filename + '_latest.pth.tar')
@@ -676,3 +643,62 @@ def re_ranking(q_g_dist, q_q_dist, g_g_dist, k1=20, k2=6, lambda_value=0.3):
     del jaccard_dist
     final_dist = final_dist[:query_num,query_num:]
     return final_dist
+
+
+# class GreedyProjector:
+#     """
+#     Applies the greedy rounding scheme described in https://arxiv.org/pdf/1912.07515.pdf, Appending B.1
+#     """
+#     def __init__(self, full_graph):
+#         self.final_graph = full_graph.graph_obj
+#         self.num_nodes = full_graph.graph_obj.num_nodes
+#
+#     def project(self):
+#         round_preds = (self.final_graph.edge_preds > 0.5).float()
+#
+#         self.constr_satisf_rate, flow_in, flow_out =compute_constr_satisfaction_rate(graph_obj = self.final_graph,
+#                                                                                      edges_out = round_preds,
+#                                                                                      undirected_edges = False,
+#                                                                                      return_flow_vals = True)
+#         # Determine the set of constraints that are violated
+#         nodes_names = torch.arange(self.num_nodes).to(flow_in.device)
+#         in_type = torch.zeros(self.num_nodes).to(flow_in.device)
+#         out_type = torch.ones(self.num_nodes).to(flow_in.device)
+#
+#         flow_in_info = torch.stack((nodes_names.float(), in_type.float())).t()
+#         flow_out_info = torch.stack((nodes_names.float(), out_type.float())).t()
+#         all_violated_constr = torch.cat((flow_in_info, flow_out_info))
+#         mask = torch.cat((flow_in > 1, flow_out > 1))
+#
+#         # Sort violated constraints by the value of thei maximum pred value among incoming / outgoing edges
+#         all_violated_constr = all_violated_constr[mask]
+#         vals, sorted_ix = torch.sort(all_violated_constr[:, 1], descending=True)
+#         all_violated_constr = all_violated_constr[sorted_ix]
+#
+#         # Iterate over violated constraints.
+#         for viol_constr in all_violated_constr:
+#             node_name, viol_type = viol_constr
+#
+#             # Determine the set of incoming / outgoing edges
+#             mask = torch.zeros(self.num_nodes).bool()
+#             mask[node_name.int()] = True
+#             if viol_type == 0:  # Flow in violation
+#                 mask = mask[self.final_graph.edge_index[1]]
+#
+#             else:  # Flow Out violation
+#                 mask = mask[self.final_graph.edge_index[0]]
+#             flow_edges_ix = torch.where(mask)[0]
+#
+#             # If the constraint is still violated, set to 1 the edge with highest score, and set the rest to 0
+#             if round_preds[flow_edges_ix].sum() > 1:
+#                 max_pred_ix = max(flow_edges_ix, key=lambda ix: self.final_graph.edge_preds[ix]*round_preds[ix]) # Multiply for round_preds so that if the edge has been set to 0
+#                                                                                                                  # it can not be set back to 1
+#                 round_preds[mask] = 0
+#                 round_preds[max_pred_ix] = 1
+#
+#         # Assert that there are no constraint violations
+#         assert scatter_add(round_preds, self.final_graph.edge_index[1], dim_size=self.num_nodes).max() <= 1
+#         assert scatter_add(round_preds, self.final_graph.edge_index[0], dim_size=self.num_nodes).max() <= 1
+#
+#         # return round_preds, constr_satisf_rate
+#         self.final_graph.edge_preds = round_preds
