@@ -3,7 +3,8 @@ from torch import nn
 
 from torch_scatter import scatter_mean, scatter_max, scatter_add
 
-from mot_neural_solver.models.mlp import MLP
+# from mot_neural_solver.models.mlp import MLP
+from models.mlp import MLP
 
 
 class MetaLayer(torch.nn.Module):

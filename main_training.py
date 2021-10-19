@@ -48,8 +48,7 @@ import utils
 from sklearn.metrics.pairwise import paired_distances
 
 
-from train import train, validate, validate_REID, compute_P_R_F, geometrical_association
-from train import validate_GNN_cross_camera_association, eval_RANK,validate_REID_with_th
+from train import train, validate
 
 from torchreid.utils import FeatureExtractor
 

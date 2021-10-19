@@ -249,7 +249,7 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
                     spatial_dist_g_norm = torch.from_numpy(spatial_dist_g.cpu().numpy() / max_dist[g]).cuda()
                     spatial_dist_manh_g = torch.unsqueeze(
                         (torch.from_numpy(paired_distances(points1, points2, metric='manhattan'))), dim=1).cuda()
-                    spatial_dist_manh_g_norm = torch.from_numpy(spatial_dist_g.cpu().numpy() / max_dist[g]).cuda()
+                    spatial_dist_manh_g_norm = torch.from_numpy(spatial_dist_manh_g.cpu().numpy() / max_dist[g]).cuda()
 
                     # spatial_dist_x = torch.abs(torch.from_numpy(xws_1 - xws_2)).cuda()
                     # spatial_dist_x_norm = (spatial_dist_x / max_dist[g])
@@ -730,7 +730,7 @@ def geometrical_association(CONFIG, val_loader):
             start_time = time.time()
 
             ########### Data extraction ###########
-            [bboxes, data_df] = data
+            [bboxes, data_df,max_dist] = data
 
             len_graphs = [len(item) for item in data_df]
 
@@ -781,6 +781,9 @@ def geometrical_association(CONFIG, val_loader):
 
                 spatial_dist_g = torch.unsqueeze((torch.from_numpy(paired_distances(points1, points2))),
                                                  dim=1).cuda()
+                if CONFIG['NORM_TO_M']:
+                    spatial_dist_g = torch.from_numpy(spatial_dist_g.cpu().numpy() / max_dist[g]).cuda()
+
                 # EDGE LABELS
 
                 edge_labels_g = torch.from_numpy(
@@ -810,13 +813,31 @@ def geometrical_association(CONFIG, val_loader):
             labels_edges_GT = edge_labels_g
 
 
-            preds = (spatial_dist_g < 30) * 1
+            if CONFIG['NORM_TO_M']:
+                predictions = (spatial_dist_g < 0.3) * 1
+            else:
+                predictions = (spatial_dist_g < 30) * 1
 
-            if i == 915:
-                a=1
+
+
             # # COMPUTE GREEDY ROUNDING
-            if CONFIG['ROUNDING']:
-               new_predictions = utils.compute_rounding(data_batch, (preds).view(-1), 1-spatial_dist_g)
+            # if CONFIG['ROUNDING']:
+            #    new_predictions = utils.compute_rounding(data_batch, (preds).view(-1), 1-spatial_dist_g)
+
+           # # COMPUTE GREEDY ROUNDING
+           # if CONFIG['ROUNDING']:
+            edge_list = data_batch.edge_index.cpu().numpy()
+
+            predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in   enumerate(predictions) if p == 1]
+            predictions_r = utils.compute_rounding(data_batch, predictions.view(-1), spatial_dist_g, predicted_active_edges)
+               # if predictions_r != []:
+               #     predicted_active_edges_r = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in
+               #                               enumerate(predictions_r) if p == 1]
+               #     # predictions = predictions_r
+               #
+               # else:
+               #     predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in
+               #                               enumerate(predictions) if p == 1]
 
 
             # CLUSTERING IDENTITIES MEASURES
@@ -828,15 +849,15 @@ def geometrical_association(CONFIG, val_loader):
             print('# Clusters GT : ' + str(n_clusters_GT))
             print(ID_GT)
 
-            predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in enumerate(preds) if p == 1]
+            predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in enumerate(predictions) if p == 1]
             G = nx.DiGraph(predicted_active_edges)
             ID_pred, n_clusters_pred = utils.compute_SCC_and_Clusters(G,data_batch.num_nodes)
             print('# Clusters:  ' + str(n_clusters_pred))
             print(ID_pred)
 
-            if new_predictions != []:
+            if predictions_r != []:
                 new_predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in
-                                          enumerate(new_predictions) if p == 1]
+                                          enumerate(predictions_r) if p == 1]
                 rounding_G = nx.DiGraph(new_predicted_active_edges)
                 rounding_ID_pred,rounding_n_clusters_pred = utils.compute_SCC_and_Clusters(rounding_G, data_batch.num_nodes)
 
@@ -848,7 +869,7 @@ def geometrical_association(CONFIG, val_loader):
 
             else:
                 rounding_ID_pred = ID_pred
-                new_predictions = preds
+                new_predictions = predictions
 
             rand_index_rounding.append(metrics.adjusted_rand_score(ID_GT, rounding_ID_pred))
             rand_index.append(metrics.adjusted_rand_score(ID_GT, ID_pred))
@@ -856,7 +877,7 @@ def geometrical_association(CONFIG, val_loader):
             fowlkes_index.append(metrics.fowlkes_mallows_score(ID_GT,rounding_ID_pred))
             # silhouette_index.append(metrics.silhouette_score(ID_GT,rounding_ID_pred))
 
-            TP, FP, TN, FN, P, R, FS = compute_P_R_F(preds.cpu().numpy(), labels_edges_GT.cpu().numpy())
+            TP, FP, TN, FN, P, R, FS = compute_P_R_F(predictions.cpu().numpy(), labels_edges_GT.cpu().numpy())
 
             TP_r, FP_r, TN_r, FN_r, P_r, R_r, FS_r = compute_P_R_F(new_predictions.cpu().numpy(),  labels_edges_GT.cpu().numpy())
             # rand_index.append(metrics.adjusted_rand_score(ID_GT, ID_pred))

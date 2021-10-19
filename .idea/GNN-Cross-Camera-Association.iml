@@ -7,10 +7,11 @@
       <sourceFolder url="file://$MODULE_DIR$/libs/deeppersonreid" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/libs/strongbaselinevehiclereid" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/libs/strongbaselinevehiclereid/layers" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/trained_models" />
       <excludeFolder url="file://$MODULE_DIR$/results" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.6 (mot_neural_solver)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Remote Python 3.6.10 (sftp://elg@192.168.23.152:22/home/elg/.conda/envs/env_gnn/bin/python)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyDocumentationSettings">

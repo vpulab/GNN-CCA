@@ -218,7 +218,7 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
                     spatial_dist_g_norm = torch.from_numpy(spatial_dist_g.cpu().numpy() / max_dist[g]).cuda()
 
                     spatial_dist_manh_g = torch.unsqueeze((torch.from_numpy(paired_distances(points1, points2,metric='manhattan'))),       dim=1).cuda()
-                    spatial_dist_manh_g_norm = torch.from_numpy(spatial_dist_g.cpu().numpy() / max_dist[g]).cuda()
+                    spatial_dist_manh_g_norm = torch.from_numpy(spatial_dist_manh_g.cpu().numpy() / max_dist[g]).cuda()
 
                     # spatial_dist_x = torch.abs(torch.from_numpy(xws_1 - xws_2)).cuda()
                     # spatial_dist_x_norm = (spatial_dist_x / max_dist[g])
@@ -456,6 +456,10 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
 
                 # create list called batch, each element: a graph
                 batch = []
+                # basket_dists = []
+                # basket_dists_norm = []
+                # spatial_dist_g_l = []
+                # spatial_dist_g_l_norm = []
 
                 flag_visualize = False
                 for g in range(len(len_graphs)):
@@ -514,17 +518,12 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
                         points2 = np.concatenate((xws_2, yws_2), axis=1)
 
                         # Convert distances to meters
-                        spatial_dist_g = torch.unsqueeze((torch.from_numpy(paired_distances(points1, points2))),
-                                                         dim=1).cuda()
+                        spatial_dist_g = torch.unsqueeze((torch.from_numpy(paired_distances(points1, points2))),    dim=1).cuda()
                         spatial_dist_g_norm = torch.from_numpy(spatial_dist_g.cpu().numpy() / max_dist[g]).cuda()
-                        spatial_dist_manh_g = torch.unsqueeze(
-                            (torch.from_numpy(paired_distances(points1, points2, metric='manhattan'))), dim=1).cuda()
-                        spatial_dist_manh_g_norm = torch.from_numpy(spatial_dist_g.cpu().numpy() / max_dist[g]).cuda()
+                        spatial_dist_manh_g = torch.unsqueeze((torch.from_numpy(paired_distances(points1, points2, metric='manhattan'))), dim=1).cuda()
+                        spatial_dist_manh_g_norm = torch.from_numpy(spatial_dist_manh_g.cpu().numpy() / max_dist[g]).cuda()
 
-                        # spatial_dist_x = torch.abs(torch.from_numpy(xws_1 - xws_2)).cuda()
-                        # spatial_dist_x_norm = (spatial_dist_x / max_dist[g])
-                        # spatial_dist_y = torch.abs(torch.from_numpy(yws_1 - yws_2)).cuda()
-                        # spatial_dist_y_norm = (spatial_dist_y / max_dist[g]).cuda()
+
 
                         if CONFIG['TRAINING']['ONLY_APPEARANCE']:
                             # edge_attr = torch.cat((emb_dist_g, node_dist_g, emb_dist_g_cos, node_dist_g_cos),   dim=1)
@@ -556,6 +555,15 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
 
                         batch.append(data)
                         prev_max_counter = max_counter
+
+                        # quitar
+                        basket_dists.append([n for pos, n in enumerate(spatial_dist_g.cpu().numpy()) if         edge_labels_g.cpu().numpy()[pos] == 1])
+                        basket_dists_norm.append([n / max_dist[g] for pos, n in enumerate(spatial_dist_g.cpu().numpy()) if
+                             edge_labels_g.cpu().numpy()[pos] == 1])
+                        spatial_dist_g_l.append(spatial_dist_g.cpu().numpy())
+                        spatial_dist_g_l_norm.append(spatial_dist_g.cpu().numpy() / max_dist[g])
+
+
 
                 if flag_visualize:
                     # EDGE CONNECTIONS
@@ -679,6 +687,7 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
                 ########### Optimizer update ###########
 
 
+
                 val_batch_time.update(time.time() - start_time)
 
                 if i % 10 == 0:
@@ -714,7 +723,7 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
 
 
 
-# # CODIGO PINTAS DIST Y IST NORM (va en el bucle)
+# # CODIGO PINTAS DIST Y DIST NORM (va en el bucle)
 
     # spatial_dist_g_l = []
     #         spatial_dist_g_l_norm = []
@@ -724,6 +733,7 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
     #         terrace_dists_norm = []
     #         lab_dists = []
     #         lab_dists_norm = []
+    # basket_dists  = []
     #         garden1_dists = []
     #         garden1_dists_norm = []
 
@@ -760,6 +770,8 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
 #                           edge_labels_g.cpu().numpy()[pos] == 1])
 #     garden1_dists_norm.append([n / max_dist[g] for pos, n in enumerate(spatial_dist_g.cpu().numpy()) if
 #                                edge_labels_g.cpu().numpy()[pos] == 1])
+
+
 
 # # CODIGO PINTAR DISTSN desopues de forwards
 #  dists = np.concatenate(spatial_dist_g_l)
@@ -810,3 +822,26 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
 #                     pets_dists_norm_mean) + 'Mean(1) Lab = ' + str(lab_dists_norm_mean) + 'Mean(1) Garden1 = ' + str(garden1_dists_norm_mean) )
 #
 #             plt.show(block=False)
+
+
+# dists = np.concatenate(spatial_dist_g_l)
+# dists_norm = np.concatenate(spatial_dist_g_l_norm)
+# basket_dists = np.concatenate(basket_dists)
+# basket_dists_norm = np.concatenate(basket_dists_norm)
+# basket_dists_mean = np.mean(basket_dists)
+# basket_dists_norm_mean = np.mean(basket_dists_norm)
+#
+# plt.figure()
+# plt.subplot(2, 1, 1)
+# plt.scatter(np.arange(len(dists)), dists, c=data_batch.edge_labels.cpu().numpy())
+# plt.plot(np.arange(len(dists)), np.ones(len(dists)) * basket_dists_mean)
+#
+#
+# plt.title('Distances. Mean(1) Basketball = ' + str(int(basket_dists_mean))  )
+# plt.subplot(2, 1, 2)
+# plt.scatter(np.arange(len(dists_norm)), dists_norm, c=data_batch.edge_labels.cpu().numpy())
+# plt.plot(np.arange(len(dists)), np.ones(len(dists)) * basket_dists_norm_mean)
+#
+# plt.title(  'Distances in meters. Mean(1) Basketball = ' + str((basket_dists_norm_mean)) )
+#
+# plt.show(block=False)

@@ -8,8 +8,8 @@ PRETRAINED_GNN_MODEL:
 
 #FOR GNN
 DATASET_TRAIN:
-    NAME: [AIC20-S01] # PETS2009_S2_L1_5_8 CAMPUS_Garden1
-    ROOT: /home/elg/Datasets/
+    NAME: [EPFL-Laboratory] # PETS2009_S2_L1_5_8 CAMPUS_Garden1
+    ROOT: /mnt/rhome/elg/Datasets/
     IMAUG: True
     RESIZE:
       resnet50: [128, 64]
@@ -26,8 +26,8 @@ DATASET_TRAIN:
     ZERO_PADDING: False
 
 DATASET_VAL:
-    NAME: AIC20-S02
-    ROOT: /home/elg/Datasets/
+    NAME: EPFL-Basketball
+    ROOT: /mnt/rhome/elg/Datasets/
     MEAN: [0.485, 0.456, 0.406]
     STD: [0.229, 0.224, 0.225]
     ZERO_PADDING: False
@@ -42,13 +42,15 @@ CONV_TO_M: # dist/CONV_TO_M to covert to meters
   CAMPUS_Garden1: 85.23
   AIC20-S01: 0.00001
   AIC20-S02: 0.00001
+  EPFL-Basketball: 153.54
+
 
 TRAINING:
     LOSS:
-      NAME: BCE_weighted #Focal BCE_weighted  BCE
+      NAME: BCE #Focal BCE_weighted  BCE
     BATCH_SIZE:
         TRAIN: 16
-        VAL: 15
+        VAL: 36
     EPOCHS: 150
     OPTIMIZER:
 #      Adam 0.001

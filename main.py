@@ -157,7 +157,6 @@ subset_val_dir = os.path.join(CONFIG['DATASET_VAL']['ROOT'],CONFIG['DATASET_VAL'
 # train_dataset = datasets.EPFL_dataset(CONFIG['DATASET_TRAIN']['NAME'], 'train', CONFIG, cnn_model)
 val_dataset = datasets.EPFL_dataset(CONFIG['DATASET_VAL']['NAME'], 'validation', CONFIG, cnn_model)
 
-val_dataset[0]
 
 # print("SHUFFLE FALSE")
 # train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'], shuffle=False,

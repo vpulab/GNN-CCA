@@ -1,4 +1,4 @@
-ID:  GNN_vehicles_AIC_resnext101_Adam0001_BNcls_SEP_LOSSES_
+ID:  GNN_vehicles_AIC_resnext101_SGD0001_BNcls_POS_WEIHTED_decay80_
 COMMENT: repeat  training, added  l2 normalization of reid emb and distances to meters
 MODE: GNN
 
@@ -8,8 +8,8 @@ PRETRAINED_GNN_MODEL:
 
 #FOR GNN
 DATASET_TRAIN:
-    NAME: [AIC20-S01] # PETS2009_S2_L1_5_8 CAMPUS_Garden1
-    ROOT: /home/elg/Datasets/
+    NAME: [EPFL-Laboratory] # PETS2009_S2_L1_5_8 CAMPUS_Garden1
+    ROOT: /mnt/rhome/elg/Datasets/
     IMAUG: True
     RESIZE:
       resnet50: [128, 64]
@@ -26,8 +26,8 @@ DATASET_TRAIN:
     ZERO_PADDING: False
 
 DATASET_VAL:
-    NAME: AIC20-S02
-    ROOT: /home/elg/Datasets/
+    NAME: EPFL-Basketball
+    ROOT: /mnt/rhome/elg/Datasets/
     MEAN: [0.485, 0.456, 0.406]
     STD: [0.229, 0.224, 0.225]
     ZERO_PADDING: False
@@ -42,25 +42,27 @@ CONV_TO_M: # dist/CONV_TO_M to covert to meters
   CAMPUS_Garden1: 85.23
   AIC20-S01: 0.00001
   AIC20-S02: 0.00001
+  EPFL-Basketball: 153.54
+
 
 TRAINING:
     LOSS:
-      WEIGHTED: False
+      NAME: BCE #Focal BCE_weighted  BCE
     BATCH_SIZE:
         TRAIN: 16
-        VAL: 15
-    EPOCHS: 100
+        VAL: 36
+    EPOCHS: 150
     OPTIMIZER:
 #      Adam 0.001
-      type: Adam
+      type: SGD
       args:
-        lr: 0.001
+        lr: 0.0001
         weight_decay: 1.0e-4 #number of epochs
         momentum: 0.9
     LR_SCHEDULER:
       type:
       args:
-        step_size: 10
+        step_size: 80
         gamma: 0.1
 
     WARMUP:

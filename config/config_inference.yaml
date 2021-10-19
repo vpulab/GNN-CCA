@@ -1,12 +1,12 @@
-ID: GNNeval_AICS02_resnext101
+ID: geometrical_th03m_ #GNNeval_AICS02_resnext101
 COMMENT: nodereid = embed reid  repetido dos veces
-MODE: GNN_eval #GNN, REID, GNN_eval, eval_RANK, REID_th
+MODE: geometrical_association #GNN, REID, GNN_eval, eval_RANK, REID_th
 
 #FOR GNN EVAL
 ROUNDING: True
 CUTTING: True
 DISJOINT: True
-PRETRAINED_GNN_MODEL: /home/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_vehicles_AIC_resnext101_SGD0001_BNcls_SEP_LOSSES_POS_WEIGHT_decay25_2021-09-23 15:58:38/files/GNN_vehicles_AIC_resnext101_SGD0001_BNcls_SEP_LOSSES_POS_WEIGHT_decay25__latest.pth.tar
+PRETRAINED_GNN_MODEL: /home/elg/Repositories/GNN-Cross-Camera-Association/results/train_terr_not_attacing_fc6_edgeupdate2021-04-24 21:12:44/files/train_terr_not_attacing_fc6_edgeupdate_best.pth.tar
 
 #  /home/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_vehicles_AIC_resnext101_SGD0001_BNcls_SEP_LOSSES_POS_WEIGHT_decay25_2021-09-23 15:58:38/files/GNN_vehicles_AIC_resnext101_SGD0001_BNcls_SEP_LOSSES_POS_WEIGHT_decay25__latest.pth.tar
 
@@ -51,7 +51,7 @@ CONV_TO_M: # dist/CONV_TO_M to covert to meters
 #FOR GNN
 
 DATASET_VAL:
-    NAME: AIC20-S02
+    NAME: EPFL-Laboratory #AIC20-S02
     ROOT: /home/elg/Datasets/
     N_CLASSES:
     CROP:
@@ -178,3 +178,7 @@ GRAPH_NET_PARAMS:
     edge_out_dim: 1
     dropout_p: 0
     use_batchnorm: False
+
+
+    # for geometrical association
+NORM_TO_M: True
