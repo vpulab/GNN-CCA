@@ -118,6 +118,7 @@ def compute_rounding(graph_obj, edges_out, probs,predicted_active_edges):
 
 
         # METHOD NO BRIGDES
+        # print('NO BRIDGES')
         # for n in nodes_flow_out[0]:
         #     pos = np.intersect1d(np.where(edge_ixs.cpu().numpy()[0] == n),
         #                          np.where(new_predictions.cpu().numpy() == 1)[0])
@@ -129,9 +130,9 @@ def compute_rounding(graph_obj, edges_out, probs,predicted_active_edges):
         #                          np.where(new_predictions.cpu().numpy() == 1)[0])
         #     remove_edge = pos[np.argmin(probs[pos].cpu().numpy())]
         #     edges_to_remove.append(remove_edge)
-
-
-
+        # #FIN
+        #
+        #
         if edges_to_remove:
             new_predictions[edges_to_remove] = 0
         else:
@@ -413,7 +414,7 @@ def save_checkpoint(state, is_best, path, filename):
                         path + '/files/' + filename + '_best.pth.tar')
         # shutil.copyfile('config/config_training.yaml', path + '/files/config.yaml')
 
-        dict_file = {'TRAIN': {'ACCURACY_AVG': str(round(state['prec'], 2)) + ' %',
+        dict_file = {'VALIDATION': {'ACCURACY_AVG': str(round(state['prec'], 2)) + ' %',
                                'ACCURACY_1': str(round(state['prec1'][-1], 2)) + ' %',
                                'ACCURACY_0': str(round(state['prec0'][-1], 2)) + ' %'},
                      'EPOCH': state['epoch'],

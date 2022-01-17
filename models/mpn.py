@@ -3,7 +3,8 @@ from torch import nn
 
 from torch_scatter import scatter_mean, scatter_max, scatter_add
 
-from mot_neural_solver.models.mlp import MLP
+# from mot_neural_solver.models.mlp import MLP
+from models.mlp import MLP
 
 
 class MetaLayer(torch.nn.Module):
@@ -265,7 +266,7 @@ class MOTMPNet(nn.Module):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
 
 
-        # As I only have 1 value in the edge features, i dont encode it
+        # As I only have 1 value in the edge features, i dont encode it. encoder inside = E_v y E_e
         latent_edge_feats, latent_node_feats = self.encoder(edge_attr, data.x)
         initial_edge_feats = latent_edge_feats
         initial_node_feats = latent_node_feats

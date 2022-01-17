@@ -4,6 +4,8 @@
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 import time
 import shutil
 import yaml
@@ -29,12 +31,12 @@ from imgaug import augmenters as iaa
 
 from PIL import Image
 from torch.utils.data import DataLoader,Dataset, ConcatDataset
-from torch_geometric.data import Data, Batch
+# from torch_geometric.data import Data, Batch
 
 from datasets import datasets
 from models.resnet import resnet50_fc256, load_pretrained_weights
 from models.mpn import MOTMPNet
-from models.bdnet import bdnet,top_bdnet_neck_botdropfeat_doubot
+from models.bdnet import bdnet,top_bdnet_neck_botdropfeat_doubot, bdnet_neck, top_bdnet_neck_doubot
 
 from libs.strongbaselinevehiclereid.modeling import multiheads_baseline
 from libs.strongbaselinevehiclereid.modeling import baseline
@@ -48,8 +50,7 @@ import utils
 from sklearn.metrics.pairwise import paired_distances
 
 
-from train import train, validate, validate_REID, compute_P_R_F, geometrical_association
-from train import validate_GNN_cross_camera_association, eval_RANK,validate_REID_with_th
+from train import train, validate
 
 from torchreid.utils import FeatureExtractor
 
@@ -62,12 +63,14 @@ def load_model(CONFIG):
     if cnn_arch == 'resnet50':
         # load resnet and trained REID weights
         cnn_model = resnet50_fc256(10, loss='xent', pretrained=True).cuda()
+        # print("DESCOMENTAR LINEA CARGA PESOS MODELO")
         load_pretrained_weights(cnn_model, CONFIG['CNN_MODEL']['model_weights_path'][cnn_arch])
         cnn_model.eval()
 
         # cnn_model.return_embeddings = True
     elif cnn_arch == 'bdnet_market':
-        cnn_model = bdnet(num_classes=751,  loss='softmax',  pretrained=True,  use_gpu= True, feature_extractor = True  )
+        cnn_model = top_bdnet_neck_doubot(num_classes=751,  loss='softmax',  pretrained=True,  use_gpu= True, feature_extractor = True )
+        # cnn_model = bdnet(num_classes=751, loss='softmax', pretrained=True, use_gpu=True, feature_extractor=True)
         load_pretrained_weights(cnn_model, CONFIG['CNN_MODEL']['model_weights_path'][cnn_arch])
         cnn_model.eval()
 
@@ -131,7 +134,9 @@ def my_collate(batch):
 
 
 global USE_CUDA, CONFIG
-USE_CUDA = torch.cuda.is_available()
+# USE_CUDA = torch.cuda.is_available()
+# torch.cuda.device(1)
+
 
 date = date = str(time.localtime().tm_year) + '-' + str(time.localtime().tm_mon).zfill(2) + '-' + str(
     time.localtime().tm_mday).zfill(2) + \
@@ -251,9 +256,13 @@ elif CONFIG['TRAINING']['OPTIMIZER']['type']  == 'SGD':
                                     weight_decay=CONFIG['TRAINING']['OPTIMIZER']['args']['weight_decay'])
 
     # Learning rate decay
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = CONFIG['TRAINING']['LR_SCHEDULER']['args']['step_size'],
-                                                gamma = CONFIG['TRAINING']['LR_SCHEDULER']['args']['gamma'])
-
+        if CONFIG['TRAINING']['LR_SCHEDULER']['type'] == 'STEP':
+            scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=CONFIG['TRAINING']['LR_SCHEDULER']['args'][
+                'step_size'], gamma=CONFIG['TRAINING']['LR_SCHEDULER']['args']['gamma'])
+        elif CONFIG['TRAINING']['LR_SCHEDULER']['type'] == 'COSINE':
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=CONFIG['TRAINING']['EPOCHS'],
+                                                                   eta_min=CONFIG['TRAINING']['OPTIMIZER']['args'][
+                                                                       'lr'])
 # TRAINING CRITERIONS
 if CONFIG['TRAINING']['LOSS']['NAME'] == 'Focal':
     criterion = utils.FocalLoss_binary(reduction = 'mean')
@@ -300,14 +309,29 @@ best_prec = 0
 best_val_loss = 1000
 list_lr = list([])
 
+
+nsteps = CONFIG['GRAPH_NET_PARAMS']['num_class_steps']
+list_mean_probs_history = {"0": {}, "1": {}}
+
+if nsteps > 0:
+    for i in range(nsteps):
+        list_mean_probs_history["0"]["step" + str(i)] = []
+        list_mean_probs_history["1"]["step" + str(i)] = []
+
+    list_mean_probs_history_val = {"0": {}, "1":{}}
+    for i in range(nsteps):
+        list_mean_probs_history_val["0"]["step" + str(i)] = []
+        list_mean_probs_history_val["1"]["step" + str(i)] = []
+
+
 for epoch in range(0, CONFIG['TRAINING']['EPOCHS']):
     epoch_start = time.time()
     list_lr.append(optimizer.param_groups[0]['lr'])
 
     train_losses,train_losses1, train_losses0, train_precision_1, train_precision_0,train_loss_in_history,\
-    train_prec1_in_history,train_prec0_in_history,train_prec_in_history = \
+    train_prec1_in_history,train_prec0_in_history,train_prec_in_history,list_mean_probs_history = \
         train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_path,train_loss_in_history, \
-              train_prec1_in_history,train_prec0_in_history,train_prec_in_history,train_dataset,dataset_dir, criterion, criterion_no_reduction)
+              train_prec1_in_history,train_prec0_in_history,train_prec_in_history,train_dataset,dataset_dir, criterion, criterion_no_reduction,list_mean_probs_history)
 
     training_loss_avg.append(train_losses.avg)
     training_loss_avg_1.append(train_losses1.avg)
@@ -316,9 +340,9 @@ for epoch in range(0, CONFIG['TRAINING']['EPOCHS']):
     training_precision_1_avg.append(train_precision_1.avg)
     training_precision_0_avg.append(train_precision_0.avg)
 
-    val_losses, val_losses1, val_losses0, val_precision_1, val_precision_0,val_loss_in_history,val_prec1_in_history,val_prec0_in_history,val_prec_in_history = \
+    val_losses, val_losses1, val_losses0, val_precision_1, val_precision_0,val_loss_in_history,val_prec1_in_history,val_prec0_in_history,val_prec_in_history,list_mean_probs_history_val = \
         validate(CONFIG,validation_loader, cnn_model, mpn_model, results_path,epoch,val_loss_in_history,val_prec1_in_history,val_prec0_in_history,val_prec_in_history,
-                 val_dataset,dataset_dir )
+                 val_dataset,dataset_dir,list_mean_probs_history_val )
 
     val_loss_avg.append(val_losses.avg)
     val_loss_avg_1.append(val_losses1.avg)
@@ -328,7 +352,6 @@ for epoch in range(0, CONFIG['TRAINING']['EPOCHS']):
 
     val_precision_1_avg.append(val_precision_1.avg)
     val_precision_0_avg.append(val_precision_0.avg)
-
 
 
     if CONFIG['TRAINING']['WARMUP']['ENABLE'] and not (flag_warmup_ended):
@@ -342,7 +365,11 @@ for epoch in range(0, CONFIG['TRAINING']['EPOCHS']):
                                         momentum=CONFIG['TRAINING']['OPTIMIZER']['args']['momentum'],
                                         weight_decay=CONFIG['TRAINING']['OPTIMIZER']['args']['weight_decay'])
             # Learning rate decay SGD
-            scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=CONFIG['TRAINING']['LR_SCHEDULER']['args'][ 'step_size'], gamma=CONFIG['TRAINING']['LR_SCHEDULER']['args']['gamma'])
+            if CONFIG['TRAINING']['LR_SCHEDULER']['type'] == 'STEP':
+                scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=CONFIG['TRAINING']['LR_SCHEDULER']['args']['step_size'], gamma=CONFIG['TRAINING']['LR_SCHEDULER']['args']['gamma'])
+            elif CONFIG['TRAINING']['LR_SCHEDULER']['type'] == 'COSINE':
+                scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=CONFIG['TRAINING']['EPOCHS'])
+
         else:
             optimizer.param_groups[0]['lr'] = lr_warmup_list[epoch]
 
@@ -361,7 +388,6 @@ for epoch in range(0, CONFIG['TRAINING']['EPOCHS']):
     plt.legend()
     plt.savefig(results_path + '/images/Precision Per Epoch.pdf', bbox_inches='tight')
     plt.close()
-
 
     plt.figure()
     plt.plot(training_loss_avg, c='red',label='Training loss')

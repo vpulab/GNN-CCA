@@ -73,6 +73,18 @@ class EPFL_dataset(Dataset):
                     det_df['xmax'] = det_df['xmin'].values + det_df['width'].values
                     det_df['label'] = 'CAR'
                     det_df['id_cam'] = int(c[-1:])
+                if 'Basketball' in name:
+                    det_df = pd.read_csv(detections_file_path, header=None, sep=" ")
+                    # Number and order of columns is always assumed to be the same
+                    det_df = det_df[det_df.columns[:len(COL_NAMES_EPFL)]]
+                    det_df.columns = COL_NAMES_EPFL
+                    det_df = det_df[det_df['id'] <= 4] # only IDs 0:4 are viewed in all cameras
+                    det_df = det_df[det_df['lost'] == 0]
+                    det_df['xmin'] = det_df['xmin'].values + 1
+                    det_df['width'] = (det_df['xmax'] - det_df['xmin']).values
+                    det_df['height'] = (det_df['ymax'] - det_df['ymin']).values
+                    det_df['id_cam'] = int(c[-1:])
+                    det_df = det_df[det_df['frame'] <= 3000]
 
 
                 else: #rest of peeople datasets EPFL CAMPUS PETS
@@ -112,6 +124,8 @@ class EPFL_dataset(Dataset):
                 self.data_det = self.data_det.append(det_df)
 
             # We only consider for training frames with at least 2 nodes and with detection from at least more than one camera
+
+            self.data_det['frame'] = (self.data_det['frame'].values).astype(np.int)
 
             frames_valid = []
             for f in range(np.min(self.data_det['frame'].values), np.max(self.data_det['frame'].values)+1):
@@ -159,6 +173,18 @@ class EPFL_dataset(Dataset):
                     det_df['xmax'] = det_df['xmin'].values + det_df['width'].values
                     det_df['label'] = 'CAR'
                     det_df['id_cam'] = int(c[-1:])
+                if 'Basketball' in name:
+                    det_df = pd.read_csv(detections_file_path, header=None, sep=" ")
+                    # Number and order of columns is always assumed to be the same
+                    det_df = det_df[det_df.columns[:len(COL_NAMES_EPFL)]]
+                    det_df.columns = COL_NAMES_EPFL
+                    det_df = det_df[det_df['id'] <= 4]  # only IDs 0:4 are viewed in all cameras
+                    det_df = det_df[det_df['lost'] == 0]
+                    det_df['xmin'] = det_df['xmin'].values + 1
+                    det_df['width'] = (det_df['xmax'] - det_df['xmin']).values
+                    det_df['height'] = (det_df['ymax'] - det_df['ymin']).values
+                    det_df['id_cam'] = int(c[-1:])
+                    det_df = det_df[det_df['frame'] <= 3000]
 
 
                 else:  # rest of peeople datasets EPFL CAMPUS PETS
@@ -198,7 +224,7 @@ class EPFL_dataset(Dataset):
                 self.data_det = self.data_det.append(det_df)
 
             # We only consider for training frames with at least 2 nodes and with detection from at least more than one camera
-
+            self.data_det['frame'] = (self.data_det['frame'].values).astype(np.int)
             frames_valid = []
             for f in range(np.min(self.data_det['frame'].values), np.max(self.data_det['frame'].values) + 1):
                 # print(f)
