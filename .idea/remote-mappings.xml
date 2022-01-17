@@ -3,7 +3,6 @@
   <component name="RemoteMappingsManager">
     <list>
       <list>
-        <remote-mappings server-id="python@sshConfig://elg@192.168.23.146:22 password/opt/miniconda2/envs/mot_neural_solver/bin/python" />
         <remote-mappings server-id="python@sshConfig://elg@192.168.23.152:22 password/home/elg/.conda/envs/mot_neural_solver/bin/python">
           <settings>
             <list>
@@ -11,7 +10,22 @@
             </list>
           </settings>
         </remote-mappings>
+        <remote-mappings server-id="python@sshConfig://elg@192.168.23.146:22 password/opt/miniconda2/envs/mot_neural_solver/bin/python">
+          <settings>
+            <list>
+              <mapping local-root="$PROJECT_DIR$" remote-root="/mnt/rhome/elg/Repositories/GNN-Cross-Camera-Association" />
+            </list>
+          </settings>
+        </remote-mappings>
+        <remote-mappings server-id="python@sftp://elg@192.168.23.152:22/usr/bin/python" />
         <remote-mappings server-id="python@sshConfig://elg@192.168.23.152:22 password/home/elg/.conda/envs/env_gnn/bin/python">
+          <settings>
+            <list>
+              <mapping local-root="$PROJECT_DIR$" remote-root="/mnt/rhome/elg/Repositories/GNN-Cross-Camera-Association" />
+            </list>
+          </settings>
+        </remote-mappings>
+        <remote-mappings server-id="python@sshConfig://elg@192.168.23.146:22 password/opt/miniconda2/envs/env_gnn/bin/python">
           <settings>
             <list>
               <mapping local-root="$PROJECT_DIR$" remote-root="/mnt/rhome/elg/Repositories/GNN-Cross-Camera-Association" />

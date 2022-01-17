@@ -6,8 +6,12 @@ import yaml
 import datetime
 
 import matplotlib
-# matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+matplotlib.use('Agg')
+from matplotlib import pyplot as plt
+# import matplotlib.pyplot as plt
+
+
+
 import numpy as np
 import cv2
 import pandas as pd
@@ -61,14 +65,26 @@ def compute_loss_acc(outputs, batch, criterion, criterion_no_reduction,  mode):
     precision_class0 = list()
     precision_all = list()
 
+    list_pred_prob = list()
     num_steps = len(outputs['classified_edges'])
-    for step in range(num_steps):
+
+   # Compute loss of all the steps and sum them
+
+    ## FOR CONSIDERING ONLY LAST 3 STEPS or less
+    # step_ini = max(0,num_steps-3)
+    # step_end = num_steps
+
+    # comment FOR CONSIDERING ALL STEPS
+    step_ini= 0
+    step_end = num_steps
+
+    for step in range(step_ini, step_end):
         preds = outputs['classified_edges'][step].view(-1)
 
         if mode == 'train':
 
             loss_per_sample = criterion_no_reduction(preds, labels)
-            loss += criterion(preds, labels)
+            loss += criterion(preds, labels) # before +=
 
             loss_class1 += torch.mean(loss_per_sample[labels == 1])
             loss_class0 += torch.mean(loss_per_sample[labels == 0])
@@ -85,39 +101,117 @@ def compute_loss_acc(outputs, batch, criterion, criterion_no_reduction,  mode):
         with torch.no_grad():
             sig = torch.nn.Sigmoid()
             preds_prob = sig(preds)
-            predictions = (preds_prob >= 0.5) * 1
-
-            # Precision class 1
-            index_label_1 = np.where(np.asarray(labels.cpu()) == 1)
-            sum_successes_1 = np.sum(predictions.cpu().numpy()[index_label_1] == labels.cpu().numpy()[index_label_1])
-            if sum_successes_1 == 0:
-                precision_class1.append(0)
-            else:
-                precision_class1.append((sum_successes_1 / len(labels[index_label_1])) * 100.0)
-
-            # Precision class 0
-            index_label_0 = np.where(np.asarray(labels.cpu()) == 0)
-            sum_successes_0 = np.sum(predictions.cpu().numpy()[index_label_0] == labels.cpu().numpy()[index_label_0])
-            if sum_successes_0 == 0:
-                precision_class0.append(0)
-            else:
-                precision_class0.append((sum_successes_0 / len(labels[index_label_0])) * 100.0)
-
-            # Precision
-            sum_successes = np.sum(predictions.cpu().numpy() == labels.cpu().numpy())
-            if sum_successes == 0:
-                precision_all.append(0)
-            else:
-                precision_all.append((sum_successes / len(labels) )* 100.0)
+            list_pred_prob.append(preds_prob)
 
 
-    return loss, precision_class1, precision_class0, precision_all, loss_class1, loss_class0
+    # Precision is computed only with last step predictions
+    with torch.no_grad():
+        preds = outputs['classified_edges'][-1].view(-1)
+        sig = torch.nn.Sigmoid()
+        preds_prob = sig(preds)
+        predictions = (preds_prob >= 0.5) * 1
+        # Precision class 1
+        index_label_1 = np.where(np.asarray(labels.cpu()) == 1)
+        sum_successes_1 = np.sum(predictions.cpu().numpy()[index_label_1] == labels.cpu().numpy()[index_label_1])
+        if sum_successes_1 == 0:
+            precision_class1.append(0)
+        else:
+            precision_class1.append((sum_successes_1 / len(labels[index_label_1])) * 100.0)
+
+        # Precision class 0
+        index_label_0 = np.where(np.asarray(labels.cpu()) == 0)
+        sum_successes_0 = np.sum(predictions.cpu().numpy()[index_label_0] == labels.cpu().numpy()[index_label_0])
+        if sum_successes_0 == 0:
+            precision_class0.append(0)
+        else:
+            precision_class0.append((sum_successes_0 / len(labels[index_label_0])) * 100.0)
+
+        # Precision
+        sum_successes = np.sum(predictions.cpu().numpy() == labels.cpu().numpy())
+        if sum_successes == 0:
+            precision_all.append(0)
+        else:
+            precision_all.append((sum_successes / len(labels) )* 100.0)
+   #  end
 
 
+   # Compute loss and precision only of the last step
+
+
+
+
+    # preds = outputs['classified_edges'][-1].view(-1)
+    # #
+    # if mode == 'train':
+    #
+    #     loss_per_sample = criterion_no_reduction(preds, labels)
+    #     loss = criterion(preds, labels)
+    #
+    #     loss_class1 = torch.mean(loss_per_sample[labels == 1])
+    #     loss_class0 = torch.mean(loss_per_sample[labels == 0])
+    #
+    #
+    # else:
+    #     loss_per_sample = F.binary_cross_entropy_with_logits(preds, labels, reduction='none')
+    #     loss_class1 = torch.mean(loss_per_sample[labels == 1])
+    #     loss_class0 = torch.mean(loss_per_sample[labels == 0])
+    #
+    #     loss = F.binary_cross_entropy_with_logits(preds, labels, reduction='mean')
+    #
+    #
+    # with torch.no_grad():
+    #     sig = torch.nn.Sigmoid()
+    #     preds_prob = sig(preds)
+    #     predictions = (preds_prob >= 0.5) * 1
+    #     # Precision class 1
+    #     index_label_1 = np.where(np.asarray(labels.cpu()) == 1)
+    #     sum_successes_1 = np.sum(predictions.cpu().numpy()[index_label_1] == labels.cpu().numpy()[index_label_1])
+    #     if sum_successes_1 == 0:
+    #         precision_class1.append(0)
+    #         # precision_class1 = 0
+    #     else:
+    #         precision_class1.append((sum_successes_1 / len(labels[index_label_1])) * 100.0)
+    #         # precision_class1 = (sum_successes_1 / len(labels[index_label_1])) * 100.0
+    #
+    #
+    #     # Precision class 0
+    #     index_label_0 = np.where(np.asarray(labels.cpu()) == 0)
+    #     sum_successes_0 = np.sum(predictions.cpu().numpy()[index_label_0] == labels.cpu().numpy()[index_label_0])
+    #
+    #     if sum_successes_0 == 0:
+    #         precision_class0.append(0)
+    #         # precision_class0 = (0)
+    #
+    #     else:
+    #         precision_class0.append((sum_successes_0 / len(labels[index_label_0])) * 100.0)
+    #         # precision_class0 = (sum_successes_0 / len(labels[index_label_0])) * 100.0
+    #
+    #
+    #     # Precision
+    #     sum_successes = np.sum(predictions.cpu().numpy() == labels.cpu().numpy())
+    #     if sum_successes == 0:
+    #         precision_all.append(0.5)
+    #         # precision_all = 0
+    #
+    #     else:
+    #         precision_all.append((sum_successes / len(labels)) * 100.0)
+    #         # precision_all = (sum_successes / len(labels)) * 100.0
+    #
+    #     for step in range(num_steps):
+    #         preds = outputs['classified_edges'][step].view(-1)
+    #         preds_prob = sig(preds)
+    #
+    #         list_pred_prob.append(preds_prob)
+
+    #     a=1
+            ## end
+    # loss = loss*5
+
+    return loss, precision_class1, precision_class0, precision_all, loss_class1, loss_class0, list_pred_prob
 
 
 def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_path,train_loss_in_history,
-          train_prec1_in_history,train_prec0_in_history, train_prec_in_history, train_dataset, dataset_dir , criterion, criterion_no_reduction):
+          train_prec1_in_history,train_prec0_in_history, train_prec_in_history, train_dataset, dataset_dir , criterion, criterion_no_reduction,list_mean_probs_history):
 
     train_losses = utils.AverageMeter('losses', ':.4e')
     train_losses1 = utils.AverageMeter('losses', ':.4e')
@@ -128,11 +222,23 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
     train_precision_class0 = utils.AverageMeter('Precision_class0', ':6.2f')
     train_precision = utils.AverageMeter('Precision', ':6.2f')
     mpn_model.train()
+    n_steps = CONFIG['GRAPH_NET_PARAMS']['num_class_steps']
+    list_mean_probs = {"0": {}, "1": {}}
+    if n_steps >0:
+        for i in range(n_steps):
+            list_mean_probs["0"]["step" + str(i)] = []
+            list_mean_probs["1"]["step" + str(i)] = []
+
+    else:
+        n_steps = 1
+        for i in range(n_steps):
+            list_mean_probs["0"]["step" + str(i)] = []
+            list_mean_probs["1"]["step" + str(i)] = []
 
 
     for i, data in enumerate(train_loader):
 
-        if i >= 0:
+        if i >= 0 :
 
             start_time = time.time()
 
@@ -140,6 +246,7 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
             [bboxes, data_df,max_dist] = data
             # max_dist = [1] * len(max_dist)
             len_graphs = [len(item) for item in data_df]
+
             with torch.no_grad():
                 if CONFIG['CNN_MODEL']['arch'] == 'resnet50':
                     node_embeds, reid_embeds = cnn_model(torch.cat(bboxes, dim=0).cuda())
@@ -350,7 +457,20 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
 
             ########### Loss ###########
 
-            loss, precision1, precision0, precision,loss_class1, loss_class0 = compute_loss_acc(outputs, data_batch, criterion, criterion_no_reduction, mode='train')
+            loss, precision1, precision0, precision,loss_class1, loss_class0, list_pred_probs = compute_loss_acc(outputs, data_batch, criterion, criterion_no_reduction, mode='train')
+            #Fill dictionary with mean probabilities of each class at each step
+            nsteps = len(list_pred_probs)
+            for s in range(nsteps):
+                if sum(sum([data_batch.edge_labels == 0])) == 0:
+                    list_mean_probs["0"]["step" + str(s)].append(torch.tensor(0.5).cuda())
+                else:
+                    list_mean_probs["0"]["step" + str(s)].append(torch.mean(list_pred_probs[s][data_batch.edge_labels == 0]))
+                if sum(sum([data_batch.edge_labels == 1])) == 0:
+                    list_mean_probs["1"]["step" + str(s)].append(torch.tensor(0.5).cuda())
+                else:
+                    list_mean_probs["1"]["step" + str(s)].append(torch.mean(list_pred_probs[s][data_batch.edge_labels == 1]))
+
+
             train_losses.update(loss.item(), CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'])
             train_losses1.update(loss_class1.item(), CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'])
             train_losses0.update(loss_class0.item(), CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'])
@@ -387,6 +507,17 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
                                           acc = train_precision_class1, acc2 =train_precision_class0, et=str(datetime.timedelta(seconds=int(train_batch_time.sum))),
                                           eta=str(datetime.timedelta(seconds=int(train_batch_time.avg * (len(train_loader) - i))))))
 
+    plt.figure()
+    for i in range(nsteps):
+        list_mean_probs_history["0"]["step" + str(i)].append(
+            np.mean(torch.stack(list_mean_probs["0"]["step" + str(i)]).cpu().numpy()))
+        plt.plot(list_mean_probs_history["0"]["step" + str(i)], '--', label="Class 0 Iter" + str(i))
+        list_mean_probs_history["1"]["step" + str(i)].append(
+            np.mean(torch.stack(list_mean_probs["1"]["step" + str(i)]).cpu().numpy()))
+        plt.plot(list_mean_probs_history["1"]["step" + str(i)], '-', label="Class 1 Iter" + str(i))
+    plt.legend(loc='best')
+    plt.savefig(results_path + '/images/Mean Probability per Class per Epoch Training.pdf', bbox_inches='tight')
+
 
 
     plt.figure()
@@ -406,10 +537,10 @@ def train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_p
     plt.savefig(results_path + '/images/Training Precision per Iteration.pdf', bbox_inches='tight')
     plt.close()
 
-    return train_losses, train_losses1, train_losses0, train_precision_class1, train_precision_class0, train_loss_in_history,train_prec1_in_history,train_prec0_in_history,train_prec_in_history
+    return train_losses, train_losses1, train_losses0, train_precision_class1, train_precision_class0, train_loss_in_history,train_prec1_in_history,train_prec0_in_history,train_prec_in_history,list_mean_probs_history
 
 
-def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_loss_in_history,val_prec1_in_history,val_prec0_in_history,val_prec_in_history, val_dataset, dataset_dir):
+def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_loss_in_history,val_prec1_in_history,val_prec0_in_history,val_prec_in_history, val_dataset, dataset_dir,list_mean_probs_history_val):
     val_losses = utils.AverageMeter('losses', ':.4e')
     val_losses1 = utils.AverageMeter('losses', ':.4e')
     val_losses0 = utils.AverageMeter('losses', ':.4e')
@@ -425,10 +556,16 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
     # global num_edges, num_edges1
     # num_edges = 0
     # num_edges1 = 0
+    nsteps = CONFIG['GRAPH_NET_PARAMS']['num_class_steps']
+    list_mean_probs = {"0": {}, "1": {}}
+    for i in range(nsteps):
+        list_mean_probs["0"]["step" + str(i)] = []
+        list_mean_probs["1"]["step" + str(i)] = []
+
 
     with torch.no_grad():
         for i, data in enumerate(val_loader):
-            if i >=0:
+            if i >= 0:
 
                 start_time = time.time()
 
@@ -557,11 +694,11 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
                         prev_max_counter = max_counter
 
                         # quitar
-                        basket_dists.append([n for pos, n in enumerate(spatial_dist_g.cpu().numpy()) if         edge_labels_g.cpu().numpy()[pos] == 1])
-                        basket_dists_norm.append([n / max_dist[g] for pos, n in enumerate(spatial_dist_g.cpu().numpy()) if
-                             edge_labels_g.cpu().numpy()[pos] == 1])
-                        spatial_dist_g_l.append(spatial_dist_g.cpu().numpy())
-                        spatial_dist_g_l_norm.append(spatial_dist_g.cpu().numpy() / max_dist[g])
+                        # basket_dists.append([n for pos, n in enumerate(spatial_dist_g.cpu().numpy()) if         edge_labels_g.cpu().numpy()[pos] == 1])
+                        # basket_dists_norm.append([n / max_dist[g] for pos, n in enumerate(spatial_dist_g.cpu().numpy()) if
+                        #      edge_labels_g.cpu().numpy()[pos] == 1])
+                        # spatial_dist_g_l.append(spatial_dist_g.cpu().numpy())
+                        # spatial_dist_g_l_norm.append(spatial_dist_g.cpu().numpy() / max_dist[g])
 
 
 
@@ -658,10 +795,26 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
 
                 outputs = mpn_model(data_batch)
 
+
                 ########### Loss ###########
 
                 # loss, acc_actives, acc_nonactives = compute_loss_acc(outputs, data_batch, mode = 'validate')
-                loss, precision1, precision0, precision,loss_class1, loss_class0 = compute_loss_acc(outputs, data_batch, criterion ='', criterion_no_reduction='', mode='validate')
+                loss, precision1, precision0, precision,loss_class1, loss_class0,list_pred_probs = compute_loss_acc(outputs, data_batch, criterion ='', criterion_no_reduction='', mode='validate')
+
+                # Fill dictionary with mean probabilities of each class at each step
+                nsteps = len(list_pred_probs)
+
+                for s in range(nsteps):
+                    if sum(sum([data_batch.edge_labels == 0])) == 0:
+                        list_mean_probs["0"]["step" + str(s)].append(torch.tensor(0.5).cuda())
+                    else:
+                        list_mean_probs["0"]["step" + str(s)].append(
+                            torch.mean(list_pred_probs[s][data_batch.edge_labels == 0]))
+                    if sum(sum([data_batch.edge_labels == 1])) == 0:
+                        list_mean_probs["1"]["step" + str(s)].append(torch.tensor(0.5).cuda())
+                    else:
+                        list_mean_probs["1"]["step" + str(s)].append(
+                            torch.mean(list_pred_probs[s][data_batch.edge_labels == 1]))
 
                 val_losses.update(loss.item(), CONFIG['TRAINING']['BATCH_SIZE']['VAL'])
                 val_losses1.update(loss_class1.item(), CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'])
@@ -703,6 +856,16 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
                                                   seconds=int(val_batch_time.avg * (len(val_loader) - i))))))
 
     plt.figure()
+    for i in range(nsteps):
+        list_mean_probs_history_val["0"]["step" + str(i)].append(np.mean(torch.stack(list_mean_probs["0"]["step" + str(i)]).cpu().numpy()))
+        plt.plot(list_mean_probs_history_val["0"]["step" + str(i)], '--', label="Class 0 Iter" + str(i))
+        list_mean_probs_history_val["1"]["step" + str(i)].append( np.mean(torch.stack(list_mean_probs["1"]["step" + str(i)]).cpu().numpy()))
+        plt.plot(list_mean_probs_history_val["1"]["step" + str(i)], '-', label="Class 1 Iter" + str(i))
+    plt.legend(loc='best')
+    plt.savefig(results_path + '/images/Mean Probability per Class per Epoch Validation.pdf', bbox_inches='tight')
+
+
+    plt.figure()
     plt.plot(val_loss_in_history, label='Loss')
 
     plt.ylabel('Loss'), plt.xlabel('Iteration')
@@ -718,7 +881,7 @@ def validate(CONFIG, val_loader, cnn_model, mpn_model, results_path,epoch,val_lo
     plt.savefig(results_path + '/images/Validation Precision per Iteration.pdf', bbox_inches='tight')
     plt.close()
 
-    return val_losses, val_losses1, val_losses0, val_precision_1, val_precision_0,val_loss_in_history,val_prec1_in_history, val_prec0_in_history,val_prec_in_history
+    return val_losses, val_losses1, val_losses0, val_precision_1, val_precision_0,val_loss_in_history,val_prec1_in_history, val_prec0_in_history,val_prec_in_history,list_mean_probs_history_val
 
 
 

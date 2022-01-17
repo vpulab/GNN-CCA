@@ -1,23 +1,18 @@
 ID: _nopost_ #geometrical_th03m_ #GNNeval_AICS02_resnext101
 COMMENT:
-MODE: geometrical_appearance_association #GNN, REID, GNN_eval, eval_RANK, REID_th, geometrical_association, geometrical_appearance_association
+MODE: GNN_eval #GNN, REID, GNN_eval, eval_RANK, REID_th, geometrical_association
 
 #FOR GNN EVAL
 ROUNDING: False
 CUTTING: False
 DISJOINT: False
-PRETRAINED_GNN_MODEL: /mnt/rhome/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_S2_bdnet_market_SGD_0005_cosine20_BS32_BCE_L42021-11-30 17:54:40/files/GNN_S2_bdnet_market_SGD_0005_cosine20_BS32_BCE_L4_best.pth.tar
-#  /mnt/rhome/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_S3_bdnet_market_SGD_0005_cosine20_BS32_BCE_L42021-12-02 05:32:08/files/GNN_S3_bdnet_market_SGD_0005_cosine20_BS32_BCE_L4_best.pth.tar
-
-#  /mnt/rhome/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_S2_bdnet_market_SGD_0005_cosine20_BS32_BCE_L42021-11-30 17:54:40/files/GNN_S2_bdnet_market_SGD_0005_cosine20_BS32_BCE_L4_best.pth.tar
-#
-
-
+PRETRAINED_GNN_MODEL: /mnt/rhome/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_S3_resnet50_SGD0005_cosine20_BS64_BCE_L5_BIS2021-11-22 08%3A49%3A15 bien/files/GNN_S3_resnet50_SGD0005_cosine20_BS64_BCE_L5_BIS_best.pth.tar
 #  /mnt/rhome/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_S1_osnet_market_SGD_0005_cosine20_BS64_BCE_L4_2021-11-12 20%3A54%3A41/files/GNN_S1_osnet_market_SGD_0005_cosine20_BS64_BCE_L4__best.pth.tar
 #  /mnt/rhome/elg/Repositories/GNN-Cross-Camera-Association/results/BIS_GNN_S2_Resnet50MCD_SGD0005_cosine20_BS64_BCEw_all_step_BNcls2021-11-09 19:03:44/files/BIS_GNN_S2_Resnet50MCD_SGD0005_cosine20_BS64_BCEw_all_step_BNcls_best.pth.tar
 #  /mnt/rhome/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_S1_Resnet50MCD_Adam0005_BS64_BCE_all_step_BNcls_2021-11-03 00:38:48/files/GNN_S1_Resnet50MCD_Adam0005_BS64_BCE_all_step_BNcls__best.pth.tar
 #  /mnt/rhome/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_trainTerr_Lab_Resnet50MCD_Adam0001_BS16_BCE_all_step_BNcls2021-11-02 10:06:36/files/GNN_trainTerr_Lab_Resnet50MCD_Adam0001_BS16_BCE_all_step_BNcls_best.pth.tar
 #  /mnt/rhome/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_S4_Resnet50MCD_SGD001_decay20_BS2562021-10-20 16:51:05/files/GNN_S4_Resnet50MCD_SGD001_decay20_BS256_best.pth.tar
+
 
 #  /home/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_vehicles_AIC_resnext101_SGD0001_BNcls_SEP_LOSSES_POS_WEIGHT_decay25_2021-09-23 15:58:38/files/GNN_vehicles_AIC_resnext101_SGD0001_BNcls_SEP_LOSSES_POS_WEIGHT_decay25__latest.pth.tar
 
@@ -38,7 +33,6 @@ PRETRAINED_GNN_MODEL: /mnt/rhome/elg/Repositories/GNN-Cross-Camera-Association/r
 #FOR eval_RANK
 
 RANK: 1
-RERANK: True
 
 DATASET_TRAIN:
     IMAUG: True
@@ -83,7 +77,7 @@ TRAINING:
     ONLY_DIST: False
 
 CNN_MODEL:
-    arch: bdnet_market #resnet50 , bdnet_market, bdnet_cuhk, osnet_market, osnet_ms_c_d,resnext101_cars
+    arch: resnet50 #resnet50 , bdnet_market, bdnet_cuhk, osnet_market, osnet_ms_c_d,resnext101_cars
     model_weights_path:
         resnet50: ./trained_models/reid/resnet50_market_cuhk_duke.tar-232
         bdnet_market: ./trained_models/top-dropblock/de00143e-market-model.pth.tar-400
@@ -95,14 +89,14 @@ CNN_MODEL:
 
 
 DATALOADER:
-    NUM_WORKERS: 7
+    NUM_WORKERS: 4
     PIN_MEMORY: True
 
 
 GRAPH_NET_PARAMS:
   node_agg_fn: 'sum'
-  num_enc_steps: 4  # before 4 Number of message passing steps
-  num_class_steps: 3  # before 3Number of message passing steps during feature vectors are classified (after Message Passing)
+  num_enc_steps: 5  # before 4 Number of message passing steps
+  num_class_steps: 4  # before 3Number of message passing steps during feature vectors are classified (after Message Passing)
   reattach_initial_nodes: False  # elg. Original: False Determines whether initially encoded node feats are used during node updates
   reattach_initial_edges: False  #  elg. Original: TrueDetermines whether initially encoded edge feats are used during node updates
 
@@ -114,6 +108,11 @@ GRAPH_NET_PARAMS:
 
     nodes:
       resnet50:
+        #EDGES FEATURES ENCODER: in my case not encoding with just 1
+  #      edge_in_dim: 4 # elg: 2 if only appearance
+  #      edge_fc_dims: [] #elg before [6]
+  #      edge_out_dim: 6 # elg: original = 16 ours 1 if not encoding
+
         #NODE FEATURES ENCODER
         node_in_dim: 2048
         #node_fc_dims: [512, 128]
@@ -191,10 +190,7 @@ GRAPH_NET_PARAMS:
 
     # for geometrical association
 NORM_TO_M: True
-GEOM_TH:
-  EPFL-Basketball: 250
-  EPFL-Terrace: 80
-  EPFL-Laboratory: 50
+GEOM_TH: 250
 
 
 #FOR REID_th
@@ -205,9 +201,9 @@ MAX_DIST_L2:
     EPFL-Terrace: 33.63
     EPFL-Laboratory: 33.79
   bdnet_market:
-    EPFL-Basketball: 34.38
-    EPFL-Terrace: 36.91
-    EPFL-Laboratory: 39.68
+    EPFL-Basketball: 3.6
+    EPFL-Terrace: 3.4
+    EPFL-Laboratory: 3.2
 
 OPT_TH:
   L2:
@@ -216,15 +212,15 @@ OPT_TH:
       EPFL-Terrace: 0.59
       EPFL-Laboratory: 0.55
     bdnet_market:
-      EPFL-Basketball: 0.62
-      EPFL-Terrace: 0.55
-      EPFL-Laboratory: 0.48
+      EPFL-Basketball: 0.57
+      EPFL-Terrace: 0.6
+      EPFL-Laboratory: 0.59
   COS:
     resnet50:
       EPFL-Basketball: 0.71
       EPFL-Terrace: 0.71
       EPFL-Laboratory: 0.75
     bdnet_market:
-      EPFL-Basketball: 0.41
-      EPFL-Terrace: 0.35
-      EPFL-Laboratory: 0.42
+      EPFL-Basketball: 0.64
+      EPFL-Terrace: 0.62
+      EPFL-Laboratory: 0.67
