@@ -4,8 +4,8 @@
 
 # Files and folders
 * **./config** : for configuration .yaml files
-* * **./datasets** : class for dataset transformations
-* * **./libs** : 3rd party libraries
+* **./datasets** : class for dataset transformations
+* **./libs** : 3rd party libraries
 * **./misc** : misc and utils scripts
 * **./models** : for different network architectures definitions
 *  **./scripts** : sh script to run several runnings with different config files
