@@ -1,4 +1,4 @@
-##Graph Neural Networks for Cross-Camera Data Association
+## Graph Neural Networks for Cross-Camera Data Association
 
 
 
@@ -14,6 +14,7 @@
 * **train.py** : train class
 * **inference.py** : inference class
 * **utils.py** : different tools/utilities classes
+* **env_gnn.yml**: anaconda environment dependencies
 
 
 # Setup
@@ -21,7 +22,7 @@
 
 The repository has been tested in the following software.
 * Ubuntu 16.04
-* Python 3.7
+* Python 3.6
 * Anaconda
 * Pycharm
 
@@ -29,14 +30,14 @@ The repository has been tested in the following software.
 
 To create and setup the Anaconda Envirmorent run the following terminal command from the repository folder:
 ```
-$ conda env create -f env_MTMC.yaml
-$ conda activate env_MTMC
+$ conda env create -f env_gnn.yml
+$ conda activate env_gnn
 ```
 
 **Clone repository**
 
 ```
-$ git clone https://github.com/elun15/Online-MTMC-vehicle-tracking.git
+$ git clone https://github.com/elun15/GNN-Cross-Camera-Association.git
 ```
 
 # Citation
