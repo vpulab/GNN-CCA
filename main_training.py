@@ -132,6 +132,7 @@ def my_collate(batch):
 
     return [bboxes_batches, df_batches,max_dist] #, path]#[bboxes_batches, frames_batches, ids_batches, ids_cam_batches]
 
+############# MAIN ###############
 
 global USE_CUDA, CONFIG
 # USE_CUDA = torch.cuda.is_available()
@@ -159,7 +160,7 @@ if CONFIG['TRAINING']['ONLY_DIST'] or CONFIG['TRAINING']['ONLY_APPEARANCE']:
     CONFIG['GRAPH_NET_PARAMS']['classifier_feats_dict']['edge_in_dim'] = 4
     CONFIG['GRAPH_NET_PARAMS']['classifier_feats_dict']['edge_fc_dims'] = [2]
 
-
+# Results folders
 results_path = os.path.join(os.getcwd(), 'results', str(CONFIG['ID']) + date)
 os.mkdir(results_path)
 os.mkdir(os.path.join(results_path, 'images'))
@@ -171,8 +172,10 @@ with open(os.path.join(results_path, 'files', 'config.yaml'), 'w') as file:
 shutil.copyfile('train.py', os.path.join(results_path, 'train.py'))
 shutil.copyfile('main_training.py', os.path.join(results_path, 'main_training.py'))
 
+#  Load feature extraction model
 cnn_model = load_model(CONFIG)
 
+# Training dataset/s
 train_datasets = []
 
 for d in CONFIG['DATASET_TRAIN']['NAME']:
@@ -183,8 +186,8 @@ for d in CONFIG['DATASET_TRAIN']['NAME']:
     # train_set = torchvision.datasets.ImageFolder(subset_train_dir)
     # val_set = torchvision.datasets.ImageFolder(subset_val_dir)
     train_datasets.append(datasets.EPFL_dataset(d, 'train', CONFIG, cnn_model))
-
-
+ 
+# Create a weighted sampler according to the length of each sequence, in case of more than one sequence
 
 if len(train_datasets) > 1:
     train_dataset = torch.utils.data.ConcatDataset(train_datasets)
@@ -202,8 +205,6 @@ if len(train_datasets) > 1:
                                                num_workers=CONFIG['DATALOADER']['NUM_WORKERS'],collate_fn=my_collate,
                                                pin_memory=CONFIG['DATALOADER']['PIN_MEMORY'])
 
-
-
 else:
     train_dataset = train_datasets[0]
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=CONFIG['TRAINING']['BATCH_SIZE']['TRAIN'],
@@ -211,20 +212,17 @@ else:
                                                num_workers=CONFIG['DATALOADER']['NUM_WORKERS'], collate_fn=my_collate,
                                                pin_memory=CONFIG['DATALOADER']['PIN_MEMORY'])
 
-# print("SHUFFLE FALSE")
-
+# Validation dataset
 val_dataset = datasets.EPFL_dataset(CONFIG['DATASET_VAL']['NAME'], 'validation', CONFIG, cnn_model)
 validation_loader = torch.utils.data.DataLoader(val_dataset, batch_size=CONFIG['TRAINING']['BATCH_SIZE']['VAL'], shuffle=False,
                                                num_workers=CONFIG['DATALOADER']['NUM_WORKERS'], collate_fn=my_collate,pin_memory=CONFIG['DATALOADER']['PIN_MEMORY'])
-#LOAD MPN NETWORK#
 
+# Load Message Passing Network 
 mpn_model = load_model_mpn(CONFIG,CONFIG['PRETRAINED_GNN_MODEL'])
 mpn_model.cuda()
 num_params_mpn  = sum([np.prod(p.size()) for p in mpn_model.parameters()])
 
-## LOSS AND OPTIMIZER
-
-
+# Define loss, optimizer, etc..
 
 if CONFIG['TRAINING']['OPTIMIZER']['type']  == 'Adam':
     if CONFIG['TRAINING']['WARMUP']['ENABLE']:
@@ -276,7 +274,7 @@ elif CONFIG['TRAINING']['LOSS']['NAME'] == 'BCE':
     criterion = nn.BCEWithLogitsLoss(reduction='mean')
     criterion_no_reduction = nn.BCEWithLogitsLoss(reduction='none')
 
-
+# For storing training and validation measurements
 # avg per epoch
 training_loss_avg = []
 training_loss_avg_1 = []
@@ -304,18 +302,18 @@ val_prec0_in_history = []
 val_prec1_in_history = []
 
 
-## TRAINING
+#### TRAINING ######
 best_prec = 0
 best_val_loss = 1000
 list_lr = list([])
 
 
-nsteps = CONFIG['GRAPH_NET_PARAMS']['num_class_steps']
+nsteps = CONFIG['GRAPH_NET_PARAMS']['num_class_steps'] # Iterations of the MPN
 list_mean_probs_history = {"0": {}, "1": {}}
 
 if nsteps > 0:
     for i in range(nsteps):
-        list_mean_probs_history["0"]["step" + str(i)] = []
+        list_mean_probs_history["0"]["step" + str(i)] = [] # Store mean probability of each class
         list_mean_probs_history["1"]["step" + str(i)] = []
 
     list_mean_probs_history_val = {"0": {}, "1":{}}
@@ -333,6 +331,7 @@ for epoch in range(0, CONFIG['TRAINING']['EPOCHS']):
         train(CONFIG, train_loader, cnn_model, mpn_model, epoch, optimizer,results_path,train_loss_in_history, \
               train_prec1_in_history,train_prec0_in_history,train_prec_in_history,train_dataset,dataset_dir, criterion, criterion_no_reduction,list_mean_probs_history)
 
+    # Loss and loss per class (0,1)    
     training_loss_avg.append(train_losses.avg)
     training_loss_avg_1.append(train_losses1.avg)
     training_loss_avg_0.append(train_losses0.avg)
@@ -344,16 +343,16 @@ for epoch in range(0, CONFIG['TRAINING']['EPOCHS']):
         validate(CONFIG,validation_loader, cnn_model, mpn_model, results_path,epoch,val_loss_in_history,val_prec1_in_history,val_prec0_in_history,val_prec_in_history,
                  val_dataset,dataset_dir,list_mean_probs_history_val )
 
+    # Loss and loss per class (0,1)    
     val_loss_avg.append(val_losses.avg)
     val_loss_avg_1.append(val_losses1.avg)
     val_loss_avg_0.append(val_losses0.avg)
 
-
-
     val_precision_1_avg.append(val_precision_1.avg)
     val_precision_0_avg.append(val_precision_0.avg)
 
-
+    # Update scheduler, learning rates, optimizers...
+    
     if CONFIG['TRAINING']['WARMUP']['ENABLE'] and not (flag_warmup_ended):
         if epoch == CONFIG['TRAINING']['WARMUP']['NUM_EPOCHS']:
             flag_warmup_ended = True
@@ -377,6 +376,7 @@ for epoch in range(0, CONFIG['TRAINING']['EPOCHS']):
         if CONFIG['TRAINING']['OPTIMIZER']['type'] == 'SGD':
             scheduler.step()
 
+    ###### DISPLAY #######            
     plt.figure()
     plt.plot(training_precision_1_avg, label='Training Prec class 1')
     plt.plot(training_precision_0_avg, label='Training Prec class 0')
@@ -425,7 +425,7 @@ for epoch in range(0, CONFIG['TRAINING']['EPOCHS']):
     # best_prec = max((val_precision_1.avg + val_precision_0.avg)/2, best_prec)
     best_val_loss = min(val_loss_avg[-1],best_val_loss)
 
-    # SEGMENTATION
+    # SAVE
     utils.save_checkpoint({
         'epoch': epoch + 1,
         'model_state_dict': mpn_model.state_dict(),
