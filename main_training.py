@@ -54,7 +54,7 @@ from train import train, validate
 
 from torchreid.utils import FeatureExtractor
 
-
+ # For loading CNN (feature extraction) model
 def load_model(CONFIG):
 
     cnn_arch = CONFIG['CNN_MODEL']['arch']
@@ -63,11 +63,10 @@ def load_model(CONFIG):
     if cnn_arch == 'resnet50':
         # load resnet and trained REID weights
         cnn_model = resnet50_fc256(10, loss='xent', pretrained=True).cuda()
-        # print("DESCOMENTAR LINEA CARGA PESOS MODELO")
         load_pretrained_weights(cnn_model, CONFIG['CNN_MODEL']['model_weights_path'][cnn_arch])
         cnn_model.eval()
-
         # cnn_model.return_embeddings = True
+        
     elif cnn_arch == 'bdnet_market':
         cnn_model = top_bdnet_neck_doubot(num_classes=751,  loss='softmax',  pretrained=True,  use_gpu= True, feature_extractor = True )
         # cnn_model = bdnet(num_classes=751, loss='softmax', pretrained=True, use_gpu=True, feature_extractor=True)
@@ -120,17 +119,15 @@ def load_model_mpn(CONFIG,weights_path=None):
         model = utils.load_pretrained_weights(model, weights_path)
     return model
 
+# Own custom collate
 def my_collate(batch):
 
     bboxes_batches = [item[0] for item in batch]
     df_batches = [item[1] for item in batch]
     max_dist = [item[2] for item in batch]
-    # frames_batches = [item[1] for item in batch]
-    # ids_batches = [item[2] for item in batch]
-    # ids_cam_batches  = [item[3] for item in batch]
-    # bboxes, frames, ids, ids_cam
+  
+    return [bboxes_batches, df_batches,max_dist]
 
-    return [bboxes_batches, df_batches,max_dist] #, path]#[bboxes_batches, frames_batches, ids_batches, ids_cam_batches]
 
 ############# MAIN ###############
 
