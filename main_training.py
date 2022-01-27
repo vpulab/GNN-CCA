@@ -178,10 +178,6 @@ train_datasets = []
 for d in CONFIG['DATASET_TRAIN']['NAME']:
 
     dataset_dir = os.path.join(CONFIG['DATASET_TRAIN']['ROOT'],d)
-    # subset_train_dir = os.path.join(CONFIG['DATASET_TRAIN']['ROOT'],d)
-    subset_val_dir = os.path.join(CONFIG['DATASET_VAL']['ROOT'],d)
-    # train_set = torchvision.datasets.ImageFolder(subset_train_dir)
-    # val_set = torchvision.datasets.ImageFolder(subset_val_dir)
     train_datasets.append(datasets.EPFL_dataset(d, 'train', CONFIG, cnn_model))
  
 # Create a weighted sampler according to the length of each sequence, in case of more than one sequence
