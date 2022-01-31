@@ -34,7 +34,6 @@ def  process(data_path):
             h = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
             w = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
 
-            blank_image = np.zeros((h, w, 3), np.uint8)
 
             output_dir = os.path.join(data_path, c, 'img1')
             if not os.path.exists(output_dir):
