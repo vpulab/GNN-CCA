@@ -44,7 +44,17 @@ $ git clone https://github.com/elun15/GNN-Cross-Camera-Association.git
 # EPFL Dataset
 This repo is evaluated on EPFL Terrace, Laboratory and Basketball sequence.
 
+For each sequence, create the following folders as follows,  placing each camera video sequence in it :
+
+/xx/xx/xx/Datasets/EPFL-Terrace/terrace1-c{0,1,2,3}/terrace1-c{0,1,2,3}.avi
+
+/xx/xx/xx/Datasets/EPFL-Laboratory/laboratory6-c{0,1,2,3}/laboratory6-c{0,1,2,3}.avi
+
+/xx/xx/xx/Datasets/EPFL-Basketball/match5-cc{0,1,2,3}/match5-cc{0,1,2,3}.avi
+
 EPFL videos can be downloaded at https://www.epfl.ch/labs/cvlab/data/data-pom-index-php/
+
+
 
 EPFL GT can be found at https://bitbucket.org/merayxu/multiview-object-tracking-dataset/src/master/
 
