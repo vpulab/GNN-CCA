@@ -52,6 +52,8 @@ For each sequence, create the following folders as follows,  placing each camera
 
 /xx/xx/xx/Datasets/EPFL-Basketball/match5-cc{0,1,2,3}/match5-cc{0,1,2,3}.avi
 
+
+
 EPFL videos can be downloaded at https://www.epfl.ch/labs/cvlab/data/data-pom-index-php/
 
 
