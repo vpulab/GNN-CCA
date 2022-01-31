@@ -40,6 +40,12 @@ $ conda activate env_gnn
 $ git clone https://github.com/elun15/GNN-Cross-Camera-Association.git
 ```
 
+
+# EPFL Dataset
+This repo is evaluated on EPFL Terrace, Laboratory and Basketball sequence.
+EPFL videos can be downloaded at https://www.epfl.ch/labs/cvlab/data/data-pom-index-php/
+EPFL GT can be found at https://bitbucket.org/merayxu/multiview-object-tracking-dataset/src/master/
+
 # Citation
 
 If you find this code and work useful, please consider citing:
