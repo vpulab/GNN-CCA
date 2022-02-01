@@ -143,7 +143,6 @@ def validate_REID(val_loader, cnn_model,CONFIG):
 
 def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_model):
 
-# AÑADIR AQUI TAMBIEN LA CONVERSION DE DISTANCIAS A METROS
     val_batch_time = utils.AverageMeter('batch_time', ':6.3f')
 
     cnn_model.eval()
@@ -157,17 +156,8 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
     TN_list = []
     F_list = []
 
-    P_r_list = []
-    R_r_list = []
-    TP_r_list = []
-    FP_r_list = []
-    FN_r_list = []
-    TN_r_list = []
-    F_r_list = []
-
 
     rand_index = []
-    rand_index_rounding = []
 
 
     mutual_index = []
@@ -194,22 +184,17 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
                 else:
                     node_embeds = cnn_model(torch.cat(bboxes, dim=0).cuda())
                     reid_embeds= node_embeds
-                # node_embeds, reid_embeds = cnn_model(torch.cat(bboxes, dim=0).cuda())
 
-                    # reid embeds needs to be normalize before computing distances
 
                 reid_embeds = F.normalize(reid_embeds, p=2, dim=0)
                 node_embeds = F.normalize(node_embeds, p=2, dim=0)
 
                 max_counter = 0
                 prev_max_counter = 0
-                edge_ixs = []
-                node_label = []
-                node_id_cam = []
+
 
                 # create list called batch, each element: a graph
                 batch = []
-
 
                 for g in range(len(len_graphs)):
 
@@ -232,17 +217,13 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
                     edge_ixs_g_np = edge_ixs_g.cpu().numpy()
 
                     node_label_g = torch.from_numpy(data_df[g]['id'].values)
-                    # node_label_g_np = node_label_g.numpy()
 
                     # features reid distances between each pair of points
                     emb_dist_g = F.pairwise_distance(reid_embeds[edge_ixs_g[0]], reid_embeds[edge_ixs_g[1]]).view(
                         -1, 1)
-                    # node_dist_g = F.pairwise_distance(node_embeds[edge_ixs_g[0]], node_embeds[edge_ixs_g[1]]).view(-1, 1)
 
                     emb_dist_g_cos = F.cosine_similarity(reid_embeds[edge_ixs_g[0]],
                                                          reid_embeds[edge_ixs_g[1]]).view(-1, 1)
-                    # node_dist_g_cos = F.cosine_similarity(node_embeds[edge_ixs_g[0]],
-                    #                                       node_embeds[edge_ixs_g[1]]).view(-1, 1)
 
                     # coordinates of each pair of points
                     xws_1 = np.expand_dims(
@@ -268,13 +249,8 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
                         (torch.from_numpy(paired_distances(points1, points2, metric='manhattan'))), dim=1).cuda()
                     spatial_dist_manh_g_norm = torch.from_numpy(spatial_dist_manh_g.cpu().numpy() / max_dist[g]).cuda()
 
-                    # spatial_dist_x = torch.abs(torch.from_numpy(xws_1 - xws_2)).cuda()
-                    # spatial_dist_x_norm = (spatial_dist_x / max_dist[g])
-                    # spatial_dist_y = torch.abs(torch.from_numpy(yws_1 - yws_2)).cuda()
-                    # spatial_dist_y_norm = (spatial_dist_y / max_dist[g]).cuda()
 
                     if CONFIG['TRAINING']['ONLY_APPEARANCE']:
-                        # edge_attr = torch.cat((emb_dist_g, node_dist_g, emb_dist_g_cos, node_dist_g_cos),   dim=1)
                         edge_attr = torch.cat((emb_dist_g, emb_dist_g_cos), dim=1)
 
                     elif CONFIG['TRAINING']['ONLY_DIST']:
@@ -283,7 +259,6 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
                             dim=1)
 
                     else:
-                        # edge_attr = torch.cat((spatial_dist_g_norm.type(torch.float32), spatial_dist_x_norm.type(torch.float32), spatial_dist_y_norm.type(torch.float32), emb_dist_g), dim=1)
                         edge_attr = torch.cat((spatial_dist_g_norm.type(torch.float32),
                                                spatial_dist_manh_g_norm.type(torch.float32), emb_dist_g,
                                                emb_dist_g_cos), dim=1)
@@ -298,12 +273,11 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
                                    data_df[g]['id'].values[data_df[g]['node'].values == edge_ixs_g_np[1][i]]) else 0
                              for i in range(edge_ixs_g_np.shape[1])])).type(torch.float).cuda()
 
-                    # bajar rango a 0 de edge_iuxs_g
+
                     edge_ixs_g = edge_ixs_g - torch.min(edge_ixs_g)
                     data = Data(x=node_embeds_g, edge_index=edge_ixs_g, y=node_label_g, edge_attr=edge_attr,
                                 edge_labels=edge_labels_g)
-                    # H = to_networkx(data)
-                    # utils.visualize(H, data.y, node_label=node_label_g)
+
 
                     batch.append(data)
                     prev_max_counter = max_counter
@@ -317,14 +291,12 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
                 outputs = mpn_model(data_batch)
                 labels_edges_GT = data_batch.edge_labels.view(-1).cpu().numpy()
 
-                # preds = outputs['classified_edges'][-1]
                 preds = outputs['classified_edges'][-1].view(-1)
 
                 sig = torch.nn.Sigmoid()
                 preds_prob = sig(preds)
                 predictions = (preds_prob >= 0.5) * 1
-                # if (sum(predictions.cpu().numpy()) > 0)[0]:
-                #     a=1
+
 
                 # CLUSTERING IDENTITIES MEASURES
                 edge_list = data_batch.edge_index.cpu().numpy()
@@ -332,23 +304,20 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
                 GT_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in enumerate(labels_edges_GT) if p == 1]
                 G_GT = nx.DiGraph(GT_active_edges)
                 ID_GT, n_clusters_GT = utils.compute_SCC_and_Clusters(G_GT,data_batch.num_nodes)
-                # print('# Clusters GT : ' + str(n_clusters_GT))
-                # print(ID_GT)
+
 
                 predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in enumerate(predictions) if p == 1]
                 G = nx.DiGraph(predicted_active_edges)
                 ID_pred, n_clusters_pred = utils.compute_SCC_and_Clusters(G,data_batch.num_nodes)
-                # print('# Clusters:  ' + str(n_clusters_pred))
-                # print(ID_pred)
 
 
-                if CONFIG['CUTTING']:
+
+                if CONFIG['PRUNING']:
                     predictions, predicted_active_edges = utils.remove_edges_single_direction(predicted_active_edges,
                                                                                      predictions, edge_list)
                     G = nx.DiGraph(predicted_active_edges)
                     ID_pred, n_clusters_pred = utils.compute_SCC_and_Clusters(G, data_batch.num_nodes)
-                    # print('# Clusters CUT:  ' + str(n_clusters_pred))
-                    # print(ID_pred)
+
 
                 # # COMPUTE GREEDY ROUNDING
                 if CONFIG['ROUNDING']:
@@ -365,43 +334,25 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
 
                     G = nx.DiGraph(predicted_active_edges)
                     ID_pred, rounding_n_clusters_pred = utils.compute_SCC_and_Clusters(G, data_batch.num_nodes)
-                    # print('# Clusters with rounding:  ' + str(rounding_n_clusters_pred))
-                    # print(ID_pred)
 
 
-
-
-                if CONFIG['CUTTING']:
+                if CONFIG['PRUNNING']:
                     predictions, predicted_active_edges = utils.remove_edges_single_direction(predicted_active_edges,
                                                                                               predictions, edge_list)
                     G = nx.DiGraph(predicted_active_edges)
                     ID_pred, n_clusters_pred = utils.compute_SCC_and_Clusters(G, data_batch.num_nodes)
-                    # print('# Clusters CUT:  ' + str(n_clusters_pred))
-                    # print(ID_pred)
 
 
-
-                if CONFIG['DISJOINT']:
+                if CONFIG['SPLITTING']:
                     predictions = utils.disjoint_big_clusters(ID_pred, predictions, preds_prob, edge_list,
                                                               data_batch, predicted_active_edges, G)
                     predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in
                                               enumerate(predictions) if p == 1]
                     G = nx.DiGraph(predicted_active_edges)
                     ID_pred, disjoint_n_clusters_pred = utils.compute_SCC_and_Clusters(G, data_batch.num_nodes)
-                    # print('# Clusters with disjoint:  ' + str(disjoint_n_clusters_pred))
-                    # print(ID_pred)
 
-                # label_ID_to_disjoint = np.where(np.bincount(ID_pred) > 4)
-                # if len(label_ID_to_disjoint) > 1:
-                #     a = 1
 
-                # # H2 is graph directed with removed single direction edges
-                # H = nx.difference(G.to_undirected().to_directed(), G)
-                # H2 = nx.difference(G, H.to_undirected())  # get the difference graph
-                # G_undirected = nx.to_undirected(H2)
-                # edges_bridges = [c for c in nx.bridges(G_undirected)]
 
-                # rand_index_rounding.append(metrics.adjusted_rand_score(ID_GT, rounding_ID_pred))
                 rand_index.append(metrics.adjusted_rand_score(ID_GT, ID_pred))
 
 
@@ -410,8 +361,7 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
                 precision_1_list.append(np.sum(np.asarray([item for item in precision1])) / len(precision1))
                 precision_0_list.append(np.sum(np.asarray([item for item in precision0])) / len(precision0))
 
-                # TP_r, FP_r, TN_r, FN_r, P_r, R_r, FS_r = compute_P_R_F(new_predictions.cpu().numpy(), labels_edges_GT)
-                # rand_index.append(metrics.adjusted_rand_score(ID_GT, ID_pred))
+
                 mutual_index.append(metrics.adjusted_mutual_info_score(ID_GT, ID_pred))
                 homogeneity.append(metrics.homogeneity_score(ID_GT, ID_pred))
                 completeness.append(metrics.completeness_score(ID_GT, ID_pred))
@@ -427,13 +377,6 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
                 F_list.append(FS)
                 TN_list.append(TN)
 
-                # TP_r_list.append(TP_r)
-                # FP_r_list.append(FP_r)
-                # FN_r_list.append(FN_r)
-                # P_r_list.append(P_r)
-                # R_r_list.append(R_r)
-                # F_r_list.append(FS_r)
-                # TN_r_list.append(TN_r)
 
                 val_batch_time.update(time.time() - start_time)
 
@@ -454,10 +397,8 @@ def eval_RANK(val_loader, model,CONFIG):
     val_batch_time = utils.AverageMeter('batch_time', ':6.3f')
 
     model.eval()
-    reid_distances = []
     edge_label = []
 
-    rand_index = []
     mutual_index = []
     homogeneity = []
     completeness = []
@@ -490,13 +431,10 @@ def eval_RANK(val_loader, model,CONFIG):
 
 
                 max_counter = 0
-                # indices = np.argsort(distmat, axis=1)
 
                 apply_cam_restrictions = True
                 for g in range(len(len_graphs)):
-                    # print('Testing frame ' + str(data_df[g].iloc[0]['frame']))
-                    # For visualize, we need a complete structure containing all the graphs info concatenated
-                    # data_df[g].loc[:,'node'] = np.asarray(range(max_counter, max_counter + len(data_df[g])))
+
                     data_df[g] = data_df[g].assign(
                         node=np.asarray(range(max_counter, max_counter + len(data_df[g]))))
 
@@ -512,9 +450,6 @@ def eval_RANK(val_loader, model,CONFIG):
                     edge_ixs_g = torch.cat(edge_ixs_g, dim=0).T.cuda()
                     edge_ixs_g_np = edge_ixs_g.cpu().numpy()
 
-
-                    # features reid distances between each pair of points
-                    # reid_distances.append(F.pairwise_distance(reid_embeds[edge_ixs_g[0]], reid_embeds[edge_ixs_g[1]]).cpu().numpy())
 
                     edge_label = (np.asarray(
                         [1 if (data_df[g]['id'].values[data_df[g]['node'].values == edge_ixs_g_np[0][i]] ==
@@ -551,25 +486,18 @@ def eval_RANK(val_loader, model,CONFIG):
 
 
                 predictions = np.asarray([1 if i in pred_active_edges else 0 for i in list_edges])
-                #HACER CALULO DE LAS MEDIDAS E IR APPEND Y DEVOLVER LAS LISTAS
+
                 val_batch_time.update(time.time() - start_time)
 
-
-                # TP, FP, TN, FN, P,R, FS, precision_class0, precision_class1 = compute_P_R_F(predictions, edge_label)
 
                 GT_active_edges = [(edge_ixs_g_np[0][pos], edge_ixs_g_np[1][pos]) for pos, p in enumerate(edge_label)
                                    if p == 1]
                 G_GT = nx.DiGraph(GT_active_edges)
                 ID_GT, n_clusters_GT = utils.compute_SCC_and_Clusters(G_GT, data_df[0].node.shape[0])
-                # print('# Clusters GT : ' + str(n_clusters_GT))
-                # print(ID_GT)
 
-                # predicted_active_edges = [(edge_ixs_g_np[0][pos], edge_ixs_g_np[1][pos]) for pos, p in enumerate(predictions) if
-                #                           p == 1]
                 G = nx.DiGraph(pred_active_edges)
                 ID_pred, n_clusters_pred = utils.compute_SCC_and_Clusters(G, data_df[0].node.shape[0])
-                # print('# Clusters:  ' + str(n_clusters_pred))
-                # print(ID_pred)
+
 
                 rand_index.append(metrics.adjusted_rand_score(ID_GT, ID_pred))
                 mutual_index.append(metrics.adjusted_mutual_info_score(ID_GT, ID_pred))
@@ -596,8 +524,6 @@ def validate_REID_with_th(CONFIG,val_loader, cnn_model,  th_L2, max_dist_L2, th_
     val_batch_time = utils.AverageMeter('batch_time', ':6.3f')
 
     cnn_model.eval()
-    reid_distances = []
-    edge_label = []
 
     L2_rand_index = []
     L2_mutual_index = []
@@ -630,7 +556,6 @@ def validate_REID_with_th(CONFIG,val_loader, cnn_model,  th_L2, max_dist_L2, th_
                 # features reid distances between each pair of points
                 max_counter = 0
 
-                flag_visualize = False
                 for g in range(len(len_graphs)):
                     # print('Testing frame ' + str(data_df[g].iloc[0]['frame']))
 
@@ -716,8 +641,6 @@ def geometrical_association(CONFIG, val_loader):
     v_measure = []
 
 
-
-
     for i, data in enumerate(val_loader):
         if i >= 0 :
 
@@ -730,9 +653,6 @@ def geometrical_association(CONFIG, val_loader):
 
             max_counter = 0
             prev_max_counter = 0
-            edge_ixs = []
-            node_label = []
-            node_id_cam = []
 
             # create list called batch, each element: a graph
             batch = []
@@ -757,8 +677,6 @@ def geometrical_association(CONFIG, val_loader):
                 edge_ixs_g_np = edge_ixs_g.cpu().numpy()
 
                 node_label_g = torch.from_numpy(data_df[g]['id'].values)
-                # node_label_g_np = node_label_g.numpy()
-
 
                 # coordinates of each pair of points
                 xws_1 = np.expand_dims(  np.asarray([data_df[g]['xw'].values[item - prev_max_counter] for item in edge_ixs_g_np[0]]),
@@ -786,26 +704,22 @@ def geometrical_association(CONFIG, val_loader):
                                data_df[g]['id'].values[data_df[g]['node'].values == edge_ixs_g_np[1][i]]) else 0
                          for i in range(edge_ixs_g_np.shape[1])])).type(torch.float).cuda()
 
-                # bajar rango a 0 de edge_iuxs_g
+                # bajar rango a 0 de edge_ixs_g
                 edge_ixs_g = edge_ixs_g - torch.min(edge_ixs_g)
 
                 data = Data(edge_index=edge_ixs_g, y=node_label_g, edge_attr=spatial_dist_g,
                             edge_labels=edge_labels_g)
-                # H = to_networkx(data)
-                # utils.visualize(H, data.y, node_label=node_label_g)
 
                 batch.append(data)
                 prev_max_counter = max_counter
-                # visualize(H, data.y, node_label=node_label_g)
 
 
             data_batch = Batch.from_data_list(batch)
-            edge_list = data_batch.edge_index.cpu().numpy()
+
 
             #
             # ########### Forward ###########
             #
-            # outputs = mpn_model(data_batch)
             labels_edges_GT = edge_labels_g
 
 
@@ -816,37 +730,27 @@ def geometrical_association(CONFIG, val_loader):
 
 
 
-            # # COMPUTE GREEDY ROUNDING
-            # if CONFIG['ROUNDING']:
-            #    new_predictions = utils.compute_rounding(data_batch, (preds).view(-1), 1-spatial_dist_g)
-
-
-
-
             # CLUSTERING IDENTITIES MEASURES
             edge_list = data_batch.edge_index.cpu().numpy()
 
             GT_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in enumerate(labels_edges_GT) if p == 1]
             G_GT = nx.DiGraph(GT_active_edges)
             ID_GT, n_clusters_GT = utils.compute_SCC_and_Clusters(G_GT,data_batch.num_nodes)
-            # print('# Clusters GT : ' + str(n_clusters_GT))
-            # print(ID_GT)
+
 
             predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in enumerate(predictions) if p == 1]
             G = nx.DiGraph(predicted_active_edges)
             ID_pred, n_clusters_pred = utils.compute_SCC_and_Clusters(G,data_batch.num_nodes)
-            # print('# Clusters:  ' + str(n_clusters_pred))
-            # print(ID_pred)
 
-            if CONFIG['DISJOINT']:
+
+            if CONFIG['SPLITTING']:
                 predictions = utils.disjoint_big_clusters(ID_pred, predictions, spatial_dist_g, edge_list,
                                                           data_batch, predicted_active_edges, G)
                 predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in
                                           enumerate(predictions) if p == 1]
                 G = nx.DiGraph(predicted_active_edges)
                 ID_pred, disjoint_n_clusters_pred = utils.compute_SCC_and_Clusters(G, data_batch.num_nodes)
-                # print('# Clusters with disjoint:  ' + str(disjoint_n_clusters_pred))
-                # print(ID_pred)
+
 
             # # COMPUTE GREEDY ROUNDING
             if CONFIG['ROUNDING']:
@@ -912,14 +816,9 @@ def geometrical_appearance_association(CONFIG, val_loader, cnn_model,th,max_dist
                 node_embeds = cnn_model(torch.cat(bboxes, dim=0).cuda())
                 reid_embeds = node_embeds
 
-            # reid_embeds = F.normalize(reid_embeds, p=2, dim=0)
-            # node_embeds = F.normalize(node_embeds, p=2, dim=0)
 
             max_counter = 0
             prev_max_counter = 0
-            edge_ixs = []
-            node_label = []
-            node_id_cam = []
 
             # create list called batch, each element: a graph
             batch = []
@@ -944,15 +843,13 @@ def geometrical_appearance_association(CONFIG, val_loader, cnn_model,th,max_dist
                 edge_ixs_g_np = edge_ixs_g.cpu().numpy()
 
                 node_label_g = torch.from_numpy(data_df[g]['id'].values)
-                # node_label_g_np = node_label_g.numpy()
 
                 # features reid distances between each pair of points
                 emb_dist_g = F.pairwise_distance(reid_embeds[edge_ixs_g[0]], reid_embeds[edge_ixs_g[1]]).view(
                     -1, 1)
                 emb_dist_g = emb_dist_g / max_dist_L2
 
-                # emb_dist_g_cos = F.cosine_similarity(reid_embeds[edge_ixs_g[0]],
-                #                                      reid_embeds[edge_ixs_g[1]]).view(-1, 1)
+
 
                 # coordinates of each pair of points
                 xws_1 = np.expand_dims(  np.asarray([data_df[g]['xw'].values[item - prev_max_counter] for item in edge_ixs_g_np[0]]),
@@ -987,37 +884,21 @@ def geometrical_appearance_association(CONFIG, val_loader, cnn_model,th,max_dist
 
                 data = Data(edge_index=edge_ixs_g, y=node_label_g, edge_attr=edge_attr,
                             edge_labels=edge_labels_g)
-                # H = to_networkx(data)
-                # utils.visualize(H, data.y, node_label=node_label_g)
 
                 batch.append(data)
                 prev_max_counter = max_counter
-                # visualize(H, data.y, node_label=node_label_g)
 
 
             data_batch = Batch.from_data_list(batch)
-            # edge_list = data_batch.edge_index.cpu().numpy()
 
             #
             # ########### Forward ###########
             #
-            # outputs = mpn_model(data_batch)
             labels_edges_GT = edge_labels_g
 
 
 
-            # predictions = (spatial_dist_g < (CONFIG['GEOM_TH'][CONFIG['DATASET_VAL']['NAME']]/max_dist[0])) * 1
             predictions = torch.logical_and(edge_attr[0] < (CONFIG['GEOM_TH'][CONFIG['DATASET_VAL']['NAME'] ]/ max_dist[0]) * 1,  (edge_attr[1]<  th) * 1)*1
-            #prueba solo apariencia
-            # predictions =  (edge_attr[1]< th) * 1
-
-
-
-            # # COMPUTE GREEDY ROUNDING
-            # if CONFIG['ROUNDING']:
-            #    new_predictions = utils.compute_rounding(data_batch, (preds).view(-1), 1-spatial_dist_g)
-
-
 
 
             # CLUSTERING IDENTITIES MEASURES
@@ -1026,24 +907,20 @@ def geometrical_appearance_association(CONFIG, val_loader, cnn_model,th,max_dist
             GT_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in enumerate(labels_edges_GT) if p == 1]
             G_GT = nx.DiGraph(GT_active_edges)
             ID_GT, n_clusters_GT = utils.compute_SCC_and_Clusters(G_GT,data_batch.num_nodes)
-            # print('# Clusters GT : ' + str(n_clusters_GT))
-            # print(ID_GT)
 
             predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in enumerate(predictions) if p == 1]
             G = nx.DiGraph(predicted_active_edges)
             ID_pred, n_clusters_pred = utils.compute_SCC_and_Clusters(G,data_batch.num_nodes)
-            # print('# Clusters:  ' + str(n_clusters_pred))
-            # print(ID_pred)
 
-            if CONFIG['DISJOINT']:
+
+            if CONFIG['SPLITTING']:
                 predictions = utils.disjoint_big_clusters(ID_pred, predictions, spatial_dist_g, edge_list,
                                                           data_batch, predicted_active_edges, G)
                 predicted_active_edges = [(edge_list[0][pos], edge_list[1][pos]) for pos, p in
                                           enumerate(predictions) if p == 1]
                 G = nx.DiGraph(predicted_active_edges)
                 ID_pred, disjoint_n_clusters_pred = utils.compute_SCC_and_Clusters(G, data_batch.num_nodes)
-                # print('# Clusters with disjoint:  ' + str(disjoint_n_clusters_pred))
-                # print(ID_pred)
+
 
             # # COMPUTE GREEDY ROUNDING
             if CONFIG['ROUNDING']:

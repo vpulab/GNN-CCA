@@ -31,7 +31,7 @@ from PIL import Image
 from torch.utils.data import DataLoader,Dataset
 from torch_geometric.data import Data, Batch
 
-from datasets import datasets
+from libs import datasets
 from models.resnet import resnet50_fc256, load_pretrained_weights
 from models.mpn import MOTMPNet
 

@@ -1,38 +1,12 @@
-ID: _nopost_ #geometrical_th03m_ #GNNeval_AICS02_resnext101
+ID: name
 COMMENT:
-MODE: geometrical_appearance_association #GNN, REID, GNN_eval, eval_RANK, REID_th, geometrical_association, geometrical_appearance_association
+MODE: GNN_eval
 
 #FOR GNN EVAL
 ROUNDING: False
-CUTTING: False
-DISJOINT: False
-PRETRAINED_GNN_MODEL: /mnt/rhome/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_S2_bdnet_market_SGD_0005_cosine20_BS32_BCE_L42021-11-30 17:54:40/files/GNN_S2_bdnet_market_SGD_0005_cosine20_BS32_BCE_L4_best.pth.tar
-#  /mnt/rhome/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_S3_bdnet_market_SGD_0005_cosine20_BS32_BCE_L42021-12-02 05:32:08/files/GNN_S3_bdnet_market_SGD_0005_cosine20_BS32_BCE_L4_best.pth.tar
-
-#  /mnt/rhome/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_S2_bdnet_market_SGD_0005_cosine20_BS32_BCE_L42021-11-30 17:54:40/files/GNN_S2_bdnet_market_SGD_0005_cosine20_BS32_BCE_L4_best.pth.tar
-#
-
-
-#  /mnt/rhome/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_S1_osnet_market_SGD_0005_cosine20_BS64_BCE_L4_2021-11-12 20%3A54%3A41/files/GNN_S1_osnet_market_SGD_0005_cosine20_BS64_BCE_L4__best.pth.tar
-#  /mnt/rhome/elg/Repositories/GNN-Cross-Camera-Association/results/BIS_GNN_S2_Resnet50MCD_SGD0005_cosine20_BS64_BCEw_all_step_BNcls2021-11-09 19:03:44/files/BIS_GNN_S2_Resnet50MCD_SGD0005_cosine20_BS64_BCEw_all_step_BNcls_best.pth.tar
-#  /mnt/rhome/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_S1_Resnet50MCD_Adam0005_BS64_BCE_all_step_BNcls_2021-11-03 00:38:48/files/GNN_S1_Resnet50MCD_Adam0005_BS64_BCE_all_step_BNcls__best.pth.tar
-#  /mnt/rhome/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_trainTerr_Lab_Resnet50MCD_Adam0001_BS16_BCE_all_step_BNcls2021-11-02 10:06:36/files/GNN_trainTerr_Lab_Resnet50MCD_Adam0001_BS16_BCE_all_step_BNcls_best.pth.tar
-#  /mnt/rhome/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_S4_Resnet50MCD_SGD001_decay20_BS2562021-10-20 16:51:05/files/GNN_S4_Resnet50MCD_SGD001_decay20_BS256_best.pth.tar
-
-#  /home/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_vehicles_AIC_resnext101_SGD0001_BNcls_SEP_LOSSES_POS_WEIGHT_decay25_2021-09-23 15:58:38/files/GNN_vehicles_AIC_resnext101_SGD0001_BNcls_SEP_LOSSES_POS_WEIGHT_decay25__latest.pth.tar
-
-#  /home/elg/Repositories/GNN-Cross-Camera-Association/results/train_terr_not_attacing_fc6_edgeupdate2021-04-24 21:12:44/files/train_terr_not_attacing_fc6_edgeupdate_best.pth.tar
-#  /home/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_trainPETSyTerrace_resnet_app_dist_distx_disty_erase0.252021-07-09 10:42:28/files/GNN_trainPETSyTerrace_resnet_app_dist_distx_disty_erase0.25_best.pth.tar
-#  /home/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_trainLAByTerrace_resnet_app_dist_distx_disty_erase0.252021-07-08 15:48:49/files/GNN_trainLAByTerrace_resnet_app_dist_distx_disty_erase0.25_best.pth.tar
-#  /home/elg/Repositories/GNN-Cross-Camera-Association/results/GNN_trainTERR_bdnetMarket_xtractor_distxy_distx_disty2021-05-19 18:24:32/files/GNN_trainTERR_bdnetExtractor_distxy_distx_disty_best.pth.tar
-
-#  /home/elg/Repositories/GNN-cross-camera-association/results/GNN_trainTERR_osnet_mscd_app_dist_distx_disty2021-05-26 22:20:54/files/GNN_trainTERR_osnet_mscd_app_dist_distx_disty_best.pth.tar
-#  /home/elg/Repositories/GNN-cross-camera-association/results/GNN_trainTERR_osnetMarket_app_dist_distx_disty2021-05-25 11:29:58/files/GNN_trainTERR_osnetMarket_app_dist_distx_disty_best.pth.tar
-#  /home/elg/Repositories/GNN-cross-camera-association/results/GNN_trainTERR_bdnetCUHK_Extractor_distxy_distx_disty2021-05-20 00:26:22/files/GNN_trainTERR_bdnetCUHK_Extractor_distxy_distx_disty_best.pth.tar
-#  /home/elg/Repositories/GNN-cross-camera-association/results/GNN_trainTERR_bdnetExtractor_distxy_distx_disty2021-05-19 18:24:32/files/GNN_trainTERR_bdnetExtractor_distxy_distx_disty_best.pth.tar
-#/home/elg/Repositories/GNN-cross-camera-association/results/GNN_trainTERR_bdnetMarket_xtractor_distxy_distx_disty2021-05-19 18:24:32/files/GNN_trainTERR_bdnetExtractor_distxy_distx_disty_best.pth.tar
-
-#  /home/elg/Repositories/GNN-Cross-Camera-Association/results/train_terr_not_attacing_fc6_edgeupdate2021-04-24 21:12:44/files/train_terr_not_attacing_fc6_edgeupdate_best.pth.tar
+PRUNING: False
+SPLITTING: False
+PRETRAINED_GNN_MODEL: ./path/to/trainedGNNmodel
 
 
 #FOR eval_RANK
@@ -66,7 +40,7 @@ CONV_TO_M: # dist/CONV_TO_M to covert to meters
 
 DATASET_VAL:
     NAME: EPFL-Laboratory  #PETS2009_S2_L1_5_8 #EPFL-Laboratory #AIC20-S02
-    ROOT: /mnt/rhome/elg/Datasets/
+    ROOT: ./datasets/
     N_CLASSES:
     CROP:
     FRAME_SAMPLING:
