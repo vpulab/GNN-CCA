@@ -4,8 +4,8 @@
 
 # Files and folders
 * **./config** : for configuration .yaml files
-* **./datasets** : class for dataset transformations
-* **./libs** : 3rd party libraries
+* **./datasets** : containing each dataset data
+* **./libs** : own and 3rd party libraries
 * **./misc** : misc and utils scripts
 * **./models** : for different network architectures definitions
 *  **./scripts** : sh script to run several runnings with different config files
@@ -42,23 +42,18 @@ $ git clone https://github.com/elun15/GNN-Cross-Camera-Association.git
 
 
 # EPFL Dataset
+
 This repo is evaluated on EPFL Terrace, Laboratory and Basketball sequence.
-
-For each sequence, create the following folders as follows,  placing each camera video sequence in it :
-
-/xx/xx/xx/Datasets/EPFL-Terrace/terrace1-c{0,1,2,3}/terrace1-c{0,1,2,3}.avi
-
-/xx/xx/xx/Datasets/EPFL-Laboratory/laboratory6-c{0,1,2,3}/laboratory6-c{0,1,2,3}.avi
-
-/xx/xx/xx/Datasets/EPFL-Basketball/match5-cc{0,1,2,3}/match5-cc{0,1,2,3}.avi
-
-
 
 EPFL videos can be downloaded at https://www.epfl.ch/labs/cvlab/data/data-pom-index-php/
 
+Place each .avi sequence in theirs corresponding path, e.g. /datasets/EPFL-Terrace/terrace1-c0/terrace1-c0.avi
 
+Then run libs/preprocess_EPFL.py to extract each frame image to their corresponding folder, e.g. /datasets/EPFL-Terrace/terrace1-c0/img1
 
-EPFL GT can be found at https://bitbucket.org/merayxu/multiview-object-tracking-dataset/src/master/
+Delete the readme.md under each img1 folder
+
+The EPFL GT we provide can be found at https://bitbucket.org/merayxu/multiview-object-tracking-dataset/src/master/.
 
 # Citation
 
