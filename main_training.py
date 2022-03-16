@@ -46,7 +46,7 @@ from torch_geometric.utils import to_networkx
 import networkx as nx
 from skimage.io import imread
 
-import utils
+from libs import utils
 from sklearn.metrics.pairwise import paired_distances
 
 

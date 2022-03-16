@@ -7,7 +7,7 @@ PRETRAINED_GNN_MODEL:
 #FOR GNN
 DATASET_TRAIN:
     NAME: [EPFL-Terrace, EPFL-Laboratory] # PETS2009_S2_L1_5_8 CAMPUS_Garden1
-    ROOT: ./datasets/
+    ROOT:  /mnt/rhome/elg/Datasets/ #./datasets/
     IMAUG: True
     RESIZE:
       resnet50: [128, 64]

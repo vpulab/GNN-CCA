@@ -39,11 +39,10 @@ from torch_geometric.utils import to_networkx
 import networkx as nx
 from skimage.io import imread
 
-import utils
+from libs import utils
 from sklearn.metrics.pairwise import paired_distances
 from scipy.sparse.csgraph import connected_components
 from sklearn import metrics
-import utils
 
 
 list_cam_colors = list(['royalblue', 'darkorange','green','firebrick'])
@@ -205,7 +204,6 @@ def compute_loss_acc(outputs, batch, criterion, criterion_no_reduction,  mode):
 
     #     a=1
             ## end
-    # loss = loss*5
 
     return loss, precision_class1, precision_class0, precision_all, loss_class1, loss_class0, list_pred_prob
 
