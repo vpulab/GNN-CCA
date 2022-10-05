@@ -1,6 +1,6 @@
 DATASET:
     NAME: EPFL-Terrace
-    ROOT: /home/elg/Datasets/
+    ROOT: ./datasets/
     N_CLASSES:
     RESIZE: [128, 64]
     CROP:

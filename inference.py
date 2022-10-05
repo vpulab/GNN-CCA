@@ -14,7 +14,7 @@ from torch_geometric.data import Data, Batch
 import networkx as nx
 from sklearn.metrics.pairwise import paired_distances
 from sklearn import metrics
-import utils
+from libs import utils
 
 list_cam_colors = list(['royalblue', 'darkorange','green','firebrick'])
 
@@ -226,18 +226,10 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
                                                          reid_embeds[edge_ixs_g[1]]).view(-1, 1)
 
                     # coordinates of each pair of points
-                    xws_1 = np.expand_dims(
-                        np.asarray([data_df[g]['xw'].values[item - prev_max_counter] for item in edge_ixs_g_np[0]]),
-                        axis=1)
-                    yws_1 = np.expand_dims(
-                        np.asarray([data_df[g]['yw'].values[item - prev_max_counter] for item in edge_ixs_g_np[0]]),
-                        axis=1)
-                    xws_2 = np.expand_dims(
-                        np.asarray([data_df[g]['xw'].values[item - prev_max_counter] for item in edge_ixs_g_np[1]]),
-                        axis=1)
-                    yws_2 = np.expand_dims(
-                        np.asarray([data_df[g]['yw'].values[item - prev_max_counter] for item in edge_ixs_g_np[1]]),
-                        axis=1)
+                    xws_1 = np.expand_dims( np.asarray([data_df[g]['xw'].values[item - prev_max_counter] for item in edge_ixs_g_np[0]]),        axis=1)
+                    yws_1 = np.expand_dims(  np.asarray([data_df[g]['yw'].values[item - prev_max_counter] for item in edge_ixs_g_np[0]]),axis=1)
+                    xws_2 = np.expand_dims(np.asarray([data_df[g]['xw'].values[item - prev_max_counter] for item in edge_ixs_g_np[1]]),                       axis=1)
+                    yws_2 = np.expand_dims(   np.asarray([data_df[g]['yw'].values[item - prev_max_counter] for item in edge_ixs_g_np[1]]),                        axis=1)
                     points1 = np.concatenate((xws_1, yws_1), axis=1)
                     points2 = np.concatenate((xws_2, yws_2), axis=1)
 
@@ -293,6 +285,7 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
 
                 preds = outputs['classified_edges'][-1].view(-1)
 
+
                 sig = torch.nn.Sigmoid()
                 preds_prob = sig(preds)
                 predictions = (preds_prob >= 0.5) * 1
@@ -336,7 +329,7 @@ def validate_GNN_cross_camera_association(CONFIG, val_loader, cnn_model, mpn_mod
                     ID_pred, rounding_n_clusters_pred = utils.compute_SCC_and_Clusters(G, data_batch.num_nodes)
 
 
-                if CONFIG['PRUNNING']:
+                if CONFIG['PRUNING']:
                     predictions, predicted_active_edges = utils.remove_edges_single_direction(predicted_active_edges,
                                                                                               predictions, edge_list)
                     G = nx.DiGraph(predicted_active_edges)
@@ -606,6 +599,8 @@ def validate_REID_with_th(CONFIG,val_loader, cnn_model,  th_L2, max_dist_L2, th_
                     L2_mutual_index.append(metrics.adjusted_mutual_info_score(ID_GT, L2_ID_pred))
                     L2_homogeneity.append(metrics.homogeneity_score(ID_GT, L2_ID_pred))
                     L2_completeness.append(metrics.completeness_score(ID_GT, L2_ID_pred))
+                    if metrics.completeness_score(ID_GT, L2_ID_pred) < 1 and metrics.homogeneity_score(ID_GT, L2_ID_pred) <1 :
+                        a=1
                     L2_v_measure.append(metrics.v_measure_score(ID_GT, L2_ID_pred))
 
                     cos_predicted_active_edges = [(edge_ixs_g_np[0][pos], edge_ixs_g_np[1][pos]) for pos, p in enumerate(cos_predictions) if p == 1]

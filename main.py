@@ -1,10 +1,8 @@
-
 import os
 import time
 import shutil
 import yaml
 import datetime
-
 import matplotlib
 # matplotlib.use('tkAgg')
 import matplotlib.pyplot as plt
@@ -14,7 +12,6 @@ import pandas as pd
 import torch
 import argparse
 
-
 from PIL import Image
 from torch.utils.data import DataLoader,Dataset
 from torch_geometric.data import Data, Batch
@@ -23,11 +20,8 @@ from libs import datasets
 from models.resnet import resnet50_fc256, load_pretrained_weights
 from models.mpn import MOTMPNet
 from models.bdnet import bdnet,top_bdnet_neck_botdropfeat_doubot,top_bdnet_neck_doubot
-
-
-import utils
+from libs import utils
 from sklearn.metrics.pairwise import paired_distances
-
 
 from inference import validate_REID, compute_P_R_F, geometrical_association,geometrical_appearance_association
 from inference import validate_GNN_cross_camera_association, eval_RANK,validate_REID_with_th
@@ -38,21 +32,16 @@ from torchreid.utils import FeatureExtractor
 def load_model(CONFIG):
 
     cnn_arch = CONFIG['CNN_MODEL']['arch']
-    # model = MOTMPNet(self.hparams['graph_model_params']).cuda()
 
     if cnn_arch == 'resnet50':
         # load resnet and trained REID weights
         cnn_model = resnet50_fc256(10, loss='xent', pretrained=True).cuda()
         load_pretrained_weights(cnn_model, CONFIG['CNN_MODEL']['model_weights_path'][cnn_arch])
-        # print("DESCOMENTAR LINEA CARGA PESOS MODELO")
-
         cnn_model.eval()
-
         # cnn_model.return_embeddings = True
-    elif cnn_arch == 'bdnet_market':
-        # cnn_model = bdnet(num_classes=751,  loss='softmax',  pretrained=True,  use_gpu= True, feature_extractor = True  )
-        cnn_model = top_bdnet_neck_doubot(num_classes=751,  loss='softmax',  pretrained=True,  use_gpu= True, feature_extractor = True )
 
+    elif cnn_arch == 'bdnet_market':
+        cnn_model = top_bdnet_neck_doubot(num_classes=751,  loss='softmax',  pretrained=True,  use_gpu= True, feature_extractor = True )
         load_pretrained_weights(cnn_model, CONFIG['CNN_MODEL']['model_weights_path'][cnn_arch])
         cnn_model.eval()
 
@@ -122,11 +111,6 @@ parser.add_argument('--ConfigPath', metavar='DIR', help='Configuration file path
 # Decode CONFIG file information
 args = parser.parse_args()
 CONFIG = yaml.safe_load(open(args.ConfigPath, 'r'))
-# results_path = os.path.join(os.getcwd(), 'inference', str(CONFIG['ID']) + date)
-
-# os.mkdir(results_path)
-# os.mkdir(os.path.join(results_path, 'images'))
-# os.mkdir(os.path.join(results_path, 'files'))
 
 
 cnn_model = load_model(CONFIG)
@@ -335,14 +319,6 @@ if CONFIG['MODE'] == 'REID':
     plt.savefig('Cross-Cam PRF REID - '+CONFIG['DATASET_VAL']['NAME']+'.pdf')
 
 elif CONFIG['MODE'] == 'GNN_eval':
-    dirname = os.path.basename(CONFIG['PRETRAINED_GNN_MODEL'])
-    info_label = CONFIG['ID']
-    results_path = os.path.join(os.getcwd(), 'results_inference', dirname + info_label + date)
-
-    os.mkdir(results_path)
-    os.mkdir(os.path.join(results_path, 'files'))
-    with open(os.path.join(results_path, 'files', 'config.yaml'), 'w') as file:
-        yaml.safe_dump(CONFIG, file)
 
     mpn_model = load_model_mpn(CONFIG, CONFIG['PRETRAINED_GNN_MODEL'])
     mpn_model.cuda()
@@ -355,7 +331,7 @@ elif CONFIG['MODE'] == 'GNN_eval':
 
     P_list, R_list, F_list, TP_list, FP_list, FN_list, TN_list, rand_index,  mutual_index, homogeneity, completeness, v_measure, prec0, prec1 = validate_GNN_cross_camera_association(CONFIG, validation_loader, cnn_model, mpn_model)
 
-    a=1
+
     P = np.mean(np.asarray(P_list))
     R = np.mean(np.asarray(R_list))
     F = np.mean(np.asarray(F_list))
@@ -370,24 +346,6 @@ elif CONFIG['MODE'] == 'GNN_eval':
     v = np.mean(np.asarray(v_measure))
     prec0 = np.mean(np.asarray(prec0))
     prec1 = np.mean(np.asarray(prec1))
-
-    f = open(results_path + '/results.txt', "w")
-    f.write('P= ' + str(P) + '\n')
-    f.write('R= ' + str(R) + '\n')
-    f.write('F= ' + str(F)+ '\n')
-    f.write('TP= ' + str(TP)+ '\n')
-    f.write('FP= ' + str(FP)+ '\n')
-    f.write('FN= ' + str(FN)+ '\n')
-    f.write('TN= ' + str(TN)+ '\n')
-    f.write('Rand index mean = ' + str(RI) + '\n')
-    f.write('Mutual index mean = ' + str(MI)+ '\n')
-    f.write('homogeneity mean = ' + str(hom)+ '\n')
-    f.write('completeness mean = ' + str(com)+ '\n')
-    f.write('v_measure mean = ' + str(v)+ '\n')
-    f.write('Mean prec 0 = ' + str(prec0)+ '\n')
-    f.write('Mean prec 1 = ' + str(prec1)+ '\n')
-
-    f.close()
 
 
     print('P= '+ str(P))
@@ -487,14 +445,6 @@ elif CONFIG['MODE'] == 'geometrical_association':
     print('v_measure mean = ' + str(v))
 
 elif CONFIG['MODE'] == 'geometrical_appearance_association':
-    dirname = os.path.basename(CONFIG['PRETRAINED_GNN_MODEL'])
-    info_label = CONFIG['ID']
-    results_path = os.path.join(os.getcwd(), 'results_inference', dirname + info_label + date)
-
-    os.mkdir(results_path)
-    os.mkdir(os.path.join(results_path, 'files'))
-    with open(os.path.join(results_path, 'files', 'config.yaml'), 'w') as file:
-        yaml.safe_dump(CONFIG, file)
 
     th = CONFIG['OPT_TH']['L2'][CONFIG['CNN_MODEL']['arch']][CONFIG['DATASET_VAL']['NAME']]
     max_dist = CONFIG['MAX_DIST_L2'][CONFIG['CNN_MODEL']['arch']][CONFIG['DATASET_VAL']['NAME']]
@@ -513,13 +463,3 @@ elif CONFIG['MODE'] == 'geometrical_appearance_association':
     print('completeness mean = ' + str(com))
     print('v_measure mean = ' + str(v))
 
-    f = open(results_path + '/results.txt', "w")
-
-    f.write('Rand index mean = ' + str(RI) + '\n')
-    f.write('Mutual index mean = ' + str(MI) + '\n')
-    f.write('homogeneity mean = ' + str(hom) + '\n')
-    f.write('completeness mean = ' + str(com) + '\n')
-    f.write('v_measure mean = ' + str(v) + '\n')
-
-
-    f.close()

@@ -1,16 +1,16 @@
-ID: name
+ID: name_evaluation
 COMMENT:
 MODE: GNN_eval
 
 #FOR GNN EVAL
-ROUNDING: False
-PRUNING: False
-SPLITTING: False
-PRETRAINED_GNN_MODEL: ./path/to/trainedGNNmodel
+ROUNDING: True
+PRUNING: True
+SPLITTING: True
+PRETRAINED_GNN_MODEL: './results/GNN_S1_Resnet50MCD_SGD0005_cosine20_BS64_BCE_all_step_BNcls_L4_2021-11-10 19:01:49/files/GNN_S1_Resnet50MCD_SGD0005_cosine20_BS64_BCE_all_step_BNcls_L4__best.pth.tar'
+#./path/to/trainedGNNmodel
 
 
 #FOR eval_RANK
-
 RANK: 1
 RERANK: True
 
@@ -39,7 +39,7 @@ CONV_TO_M: # dist/CONV_TO_M to covert to meters
 #FOR GNN
 
 DATASET_VAL:
-    NAME: EPFL-Laboratory  #PETS2009_S2_L1_5_8 #EPFL-Laboratory #AIC20-S02
+    NAME: EPFL-Basketball   #PETS2009_S2_L1_5_8 #EPFL-Laboratory #AIC20-S02
     ROOT: ./datasets/
     N_CLASSES:
     CROP:
@@ -57,7 +57,7 @@ TRAINING:
     ONLY_DIST: False
 
 CNN_MODEL:
-    arch: bdnet_market #resnet50 , bdnet_market, bdnet_cuhk, osnet_market, osnet_ms_c_d,resnext101_cars
+    arch: resnet50 #resnet50 , bdnet_market, bdnet_cuhk, osnet_market, osnet_ms_c_d,resnext101_cars
     model_weights_path:
         resnet50: ./trained_models/reid/resnet50_market_cuhk_duke.tar-232
         bdnet_market: ./trained_models/top-dropblock/de00143e-market-model.pth.tar-400
@@ -69,7 +69,7 @@ CNN_MODEL:
 
 
 DATALOADER:
-    NUM_WORKERS: 7
+    NUM_WORKERS: 4
     PIN_MEMORY: True
 
 
@@ -144,20 +144,20 @@ GRAPH_NET_PARAMS:
 
   # MPN EDGE UPDATE
   edge_model_feats_dict:
-    fc_dims: [6] #  before 66,6elg: orig [80,16]In size is 4 * encoded nodes + 2 * encoded edges
+    fc_dims: [6] #  In size is 4 * encoded nodes + 2 * encoded edges
     dropout_p: 0
     use_batchnorm: False
 
  # MPN NODE UPDATE
 
   node_model_feats_dict:
-    fc_dims: [32]  # elg: orig [56,32] In size is 2 * encoded nodes + 1 * encoded edges
+    fc_dims: [32]  # In size is 2 * encoded nodes + 1 * encoded edges
     dropout_p: 0
     use_batchnorm: False
 
   classifier_feats_dict:
-    edge_in_dim: 6 #orig 16
-    edge_fc_dims: [4] # orig
+    edge_in_dim: 6 #
+    edge_fc_dims: [4] #
     edge_out_dim: 1
     dropout_p: 0
     use_batchnorm: True

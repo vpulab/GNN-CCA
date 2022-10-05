@@ -6,8 +6,8 @@ PRETRAINED_GNN_MODEL:
 
 #FOR GNN
 DATASET_TRAIN:
-    NAME: [EPFL-Terrace, EPFL-Laboratory] # PETS2009_S2_L1_5_8 CAMPUS_Garden1
-    ROOT:  /mnt/rhome/elg/Datasets/ #./datasets/
+    NAME: [EPFL-Terrace, EPFL-Laboratory] # S1
+    ROOT:  ./datasets/
     IMAUG: True
     RESIZE:
       resnet50: [128, 64]
@@ -51,7 +51,7 @@ TRAINING:
     LOSS:
       NAME: BCE #Focal BCE_weighted  BCE
     BATCH_SIZE:
-        TRAIN: 16
+        TRAIN: 64
         VAL: 256
     EPOCHS: 150
     OPTIMIZER:
@@ -93,16 +93,16 @@ DATALOADER:
 
 GRAPH_NET_PARAMS:
   node_agg_fn: 'sum'
-  num_enc_steps: 4  # before 4 Number of message passing steps
-  num_class_steps: 3  # before 3Number of message passing steps during feature vectors are classified (after Message Passing)
-  reattach_initial_nodes: False  # elg. Original: False Determines whether initially encoded node feats are used during node updates
-  reattach_initial_edges: False  #  elg. Original: TrueDetermines whether initially encoded edge feats are used during node updates
+  num_enc_steps: 4  #  Number of message passing steps
+  num_class_steps: 3  # Number of message passing steps during feature vectors are classified (after Message Passing)
+  reattach_initial_nodes: False  #  Determines whether initially encoded node feats are used during node updates
+  reattach_initial_edges: False  #   Determines whether initially encoded edge feats are used during node updates
 
   encoder_feats_dict:
     edges:
-      edge_in_dim: 4 # elg: 2 if only appearance or only dist
-      edge_fc_dims: [ ] #elg before [6]
-      edge_out_dim: 6 # elg: original = 16 ours 1 if not encoding
+      edge_in_dim: 4 #  2 if only appearance or only dist
+      edge_fc_dims: [ ]
+      edge_out_dim: 6 # 1 if not encoding
 
     nodes:
       resnet50:
@@ -162,20 +162,20 @@ GRAPH_NET_PARAMS:
 
   # MPN EDGE UPDATE
   edge_model_feats_dict:
-    fc_dims: [6] #  before 66,6elg: orig [80,16]In size is 4 * encoded nodes + 2 * encoded edges
+    fc_dims: [6] #  In size is 4 * encoded nodes + 2 * encoded edges
     dropout_p: 0
     use_batchnorm: False
 
  # MPN NODE UPDATE
 
   node_model_feats_dict:
-    fc_dims: [32]  # elg: orig [56,32] In size is 2 * encoded nodes + 1 * encoded edges
+    fc_dims: [32]  # In size is 2 * encoded nodes + 1 * encoded edges
     dropout_p: 0
     use_batchnorm: False
 
   classifier_feats_dict:
-    edge_in_dim: 6 #orig 16
-    edge_fc_dims: [4] # orig
+    edge_in_dim: 6
+    edge_fc_dims: [4]
     edge_out_dim: 1
     dropout_p: 0
     use_batchnorm: False

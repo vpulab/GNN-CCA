@@ -22,8 +22,6 @@ from torch.nn import functional as F
 import torch.nn as nn
 
 
-
-
 def compute_rounding(graph_obj, edges_out, probs,predicted_active_edges):
     """
     Determines the proportion of Flow Conservation inequalities that are satisfied.
