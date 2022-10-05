@@ -30,10 +30,17 @@ conda activate env_gnn
 
 
 **Download and prepare EPFL dataset**
-This repo is evaluated on EPFL Terrace, Laboratory and Basketball sequence.
 
- 1. Download the EPFL video sequences at  [https://www.epfl.ch/labs/cvlab/data/data-pom-index-php/](https://www.epfl.ch/labs/cvlab/data/data-pom-index-php/)
- 2. Place each .avi sequence in their corresponding path, e.g. *./datasets/EPFL-Terrace/terrace1-c0/terrace1-c0.avi*
+This repo is evaluated on EPFL Terrace (seq 1), Laboratory (seq 6p), and Basketball sequence.
+
+ 1. To automatically download the sequences run
+```
+download_dataset.sh"
+```
+or,
+
+
+ 2. To do it by your own download the EPFL video sequences at  [https://www.epfl.ch/labs/cvlab/data/data-pom-index-php/](https://www.epfl.ch/labs/cvlab/data/data-pom-index-php/). Then, place each .avi sequence in their corresponding path, e.g. *./datasets/EPFL-Terrace/terrace1-c0/terrace1-c0.avi* and name each .avi as the name of the folder containing it.
  3. Run *.libs/preprocess_EPFL.py* in order to extract frame images. 
  4. The EPFL GT, that we already provide,  can be found at [https://bitbucket.org/merayxu/multiview-object-tracking-dataset/src/master/](https://bitbucket.org/merayxu/multiview-object-tracking-dataset/src/master/). 
 
