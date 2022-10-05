@@ -1,5 +1,6 @@
 
 
+
 ## GNN for CCA
 
 IEEE TCSVT Paper:  https://ieeexplore.ieee.org/document/9893862
@@ -31,29 +32,33 @@ conda activate env_gnn
 
 **Download and prepare EPFL dataset**
 
-This repo is evaluated on EPFL Terrace (seq 1), Laboratory (seq 6p), and Basketball sequence.
+This repo is evaluated on <u>EPFL Terrace (seq. 1), Laboratory (seq. 6p), and Basketball</u> sequence.
 
- 1. To automatically download the sequences run
+**1a**. To automatically download the sequences run
 ```
-download_dataset.sh"
+download_dataset.sh
 ```
 or,
 
+ **1b**. To do it by your own download the EPFL video sequences at  [https://www.epfl.ch/labs/cvlab/data/data-pom-index-php/](https://www.epfl.ch/labs/cvlab/data/data-pom-index-php/). Then, place each .avi sequence in their corresponding path, e.g. *./datasets/EPFL-Terrace/terrace1-c0/terrace1-c0.avi* and name each .avi as the name of the folder containing it.
+ 
+**2.** Run
+```
+./libs/preprocess_EPFL.py
+```
+ in order to extract frame images. 
 
- 2. To do it by your own download the EPFL video sequences at  [https://www.epfl.ch/labs/cvlab/data/data-pom-index-php/](https://www.epfl.ch/labs/cvlab/data/data-pom-index-php/). Then, place each .avi sequence in their corresponding path, e.g. *./datasets/EPFL-Terrace/terrace1-c0/terrace1-c0.avi* and name each .avi as the name of the folder containing it.
- 3. Run *.libs/preprocess_EPFL.py* in order to extract frame images. 
- 4. The EPFL GT, that we already provide,  can be found at [https://bitbucket.org/merayxu/multiview-object-tracking-dataset/src/master/](https://bitbucket.org/merayxu/multiview-object-tracking-dataset/src/master/). 
+**3.**  The EPFL GT (we already provide it, no need to download it)  can be found at [https://bitbucket.org/merayxu/multiview-object-tracking-dataset/src/master/](https://bitbucket.org/merayxu/multiview-object-tracking-dataset/src/master/). 
 
 
 **Download pre-trained REID models**
 
- 5. Download the pre-trained REID models from https://1drv.ms/u/s!AufOLvb5OB5fhx0os9hCDdkFfT6l?e=roljmV  , unzip the 4 folders and place them under *./trained_models/*
+ **4.**  Download the pre-trained REID models from https://1drv.ms/u/s!AufOLvb5OB5fhx0os9hCDdkFfT6l?e=roljmV  , unzip the 4 folders and place them under *./trained_models/*
 
 **Download  a pre-trained GNN-CCA model**
 We provide the weights of the GNN trained on the S1 set (see paper for detailes).
  
-
- 6.  Download the pre-trained weights from https://1drv.ms/u/s!AufOLvb5OB5fhx7O9KIJDqKLj8Uu?e=hbyR7T and place the folder *GNN_S1_Resnet50MCD_SGD0005_cosine20_BS64_BCE_all_step_BNcls_L4_2021-11-10 19:01:49* under *./results/* folder.
+ **5**.  Download the pre-trained weights from https://1drv.ms/u/s!AufOLvb5OB5fhx7O9KIJDqKLj8Uu?e=hbyR7T and place the folder *GNN_S1_Resnet50MCD_SGD0005_cosine20_BS64_BCE_all_step_BNcls_L4_2021-11-10 19:01:49* under *./results/* folder.
 
 **Inference Running**
 
