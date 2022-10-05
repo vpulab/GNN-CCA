@@ -14,6 +14,12 @@ The repository has been tested in the following software.
 * Anaconda
 * Pycharm
 
+**Clone repository**
+
+```
+git clone https://github.com/elun15/GNN-Cross-Camera-Association.git
+```
+
 **Anaconda environment**
 
 To create and setup the Anaconda Envirmorent run the following terminal command from the repository folder:
@@ -22,17 +28,12 @@ conda env create -f env_gnn.yml
 conda activate env_gnn
 ```
 
-**Clone repository**
-
-```
-git clone https://github.com/elun15/GNN-Cross-Camera-Association.git
-```
 
 **Download and prepare EPFL dataset**
 This repo is evaluated on EPFL Terrace, Laboratory and Basketball sequence.
 
  1. Download the EPFL video sequences at  [https://www.epfl.ch/labs/cvlab/data/data-pom-index-php/](https://www.epfl.ch/labs/cvlab/data/data-pom-index-php/)
- 2. Place each .avi sequence in theirs corresponding path, e.g. *./datasets/EPFL-Terrace/terrace1-c0/terrace1-c0.avi*
+ 2. Place each .avi sequence in their corresponding path, e.g. *./datasets/EPFL-Terrace/terrace1-c0/terrace1-c0.avi*
  3. Run *.libs/preprocess_EPFL.py* in order to extract frame images. 
  4. The EPFL GT, that we already provide,  can be found at [https://bitbucket.org/merayxu/multiview-object-tracking-dataset/src/master/](https://bitbucket.org/merayxu/multiview-object-tracking-dataset/src/master/). 
 
