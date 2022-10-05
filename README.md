@@ -18,14 +18,14 @@ The repository has been tested in the following software.
 
 To create and setup the Anaconda Envirmorent run the following terminal command from the repository folder:
 ```
-$ conda env create -f env_gnn.yml
-$ conda activate env_gnn
+conda env create -f env_gnn.yml
+conda activate env_gnn
 ```
 
 **Clone repository**
 
 ```
-$ git clone https://github.com/elun15/GNN-Cross-Camera-Association.git
+git clone https://github.com/elun15/GNN-Cross-Camera-Association.git
 ```
 
 **Download and prepare EPFL dataset**
