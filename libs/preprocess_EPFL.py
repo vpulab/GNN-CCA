@@ -49,7 +49,7 @@ def  process(data_path):
                 frame_name = os.path.join(output_dir, str(frame_counter).zfill(6) + ".jpg")
                 frame_counter += 1
 
-                print(video.get(cv2.CAP_PROP_POS_FRAMES))
+                #print(video.get(cv2.CAP_PROP_POS_FRAMES))
 
                 if not ret:
                     print("End of video file.")
