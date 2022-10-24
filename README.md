@@ -1,12 +1,11 @@
 
 
 
-## GNN for CCA
+# Graph Neural Networks for Cross-Camera Data Association
 
 IEEE TCSVT Paper:  https://ieeexplore.ieee.org/document/9893862
 
-
-# Setup & Running
+## Setup & Running
 **Requirements**
 
 The repository has been tested in the following software.
@@ -15,59 +14,68 @@ The repository has been tested in the following software.
 * Anaconda
 * Pycharm
 
-**Clone repository**
+**1. Clone repository**
 
 ```
 git clone https://github.com/elun15/GNN-Cross-Camera-Association.git
 ```
 
-**Anaconda environment**
+**2. Anaconda environment**
 
 To create and setup the Anaconda Envirmorent run the following terminal command from the repository folder:
 ```
 conda env create -f env_gnn.yml
 conda activate env_gnn
 ```
+**3. Install Torchreid library**
 
 
-**Download and prepare EPFL dataset**
+    git clone https://github.com/KaiyangZhou/deep-person-reid.git
+    cd deep-person-reid/
+    python setup.py develop
+    cd ..
+        
+
+
+**4. Download and prepare EPFL dataset**
 
 This repo is evaluated on <u>EPFL Terrace (seq. 1), Laboratory (seq. 6p), and Basketball</u> sequence.
 
-**1a**. To automatically download the sequences run
+**4a**. To automatically download the sequences run
 ```
 download_dataset.sh
 ```
 or,
 
- **1b**. To do it by your own download the EPFL video sequences at  [https://www.epfl.ch/labs/cvlab/data/data-pom-index-php/](https://www.epfl.ch/labs/cvlab/data/data-pom-index-php/). Then, place each .avi sequence in their corresponding path, e.g. *./datasets/EPFL-Terrace/terrace1-c0/terrace1-c0.avi* and name each .avi as the name of the folder containing it.
+ **4b**. To do it by your own download the EPFL video sequences at  [https://www.epfl.ch/labs/cvlab/data/data-pom-index-php/](https://www.epfl.ch/labs/cvlab/data/data-pom-index-php/). Then, place each .avi sequence in their corresponding path, e.g. *./datasets/EPFL-Terrace/terrace1-c0/terrace1-c0.avi* and name each .avi as the name of the folder containing it.
  
-**2.** Run
+**5. Run** 
 ```
-./libs/preprocess_EPFL.py
+python ./libs/preprocess_EPFL.py
 ```
  in order to extract frame images. 
 
-**3.**  The EPFL GT (we already provide it, no need to download it)  can be found at [https://bitbucket.org/merayxu/multiview-object-tracking-dataset/src/master/](https://bitbucket.org/merayxu/multiview-object-tracking-dataset/src/master/). 
+**6. Ground-truth** 
+
+ The EPFL GT (we already provide it, no need to download it)  can be found at [https://bitbucket.org/merayxu/multiview-object-tracking-dataset/src/master/](https://bitbucket.org/merayxu/multiview-object-tracking-dataset/src/master/). 
 
 
-**Download pre-trained REID models**
+**7. Download pre-trained REID models**
 
- **4.**  Download the pre-trained REID models from https://1drv.ms/u/s!AufOLvb5OB5fhx0os9hCDdkFfT6l?e=roljmV  , unzip the 4 folders and place them under *./trained_models/*
+  Download the pre-trained REID models from https://1drv.ms/u/s!AufOLvb5OB5fhx0os9hCDdkFfT6l?e=roljmV  , unzip the 4 folders and place them under *./trained_models/*
 
-**Download  a pre-trained GNN-CCA model**
+**8. Download  a pre-trained GNN-CCA model**
+
 We provide the weights of the GNN trained on the S1 set (see paper for detailes).
- 
- **5**.  Download the pre-trained weights from https://1drv.ms/u/s!AufOLvb5OB5fhx7O9KIJDqKLj8Uu?e=hbyR7T and place the folder *GNN_S1_Resnet50MCD_SGD0005_cosine20_BS64_BCE_all_step_BNcls_L4_2021-11-10 19:01:49* under *./results/* folder.
+Download the pre-trained weights from https://1drv.ms/u/s!AufOLvb5OB5fhx7O9KIJDqKLj8Uu?e=hbyR7T and place the folder *GNN_S1_Resnet50MCD_SGD0005_cosine20_BS64_BCE_all_step_BNcls_L4_2021-11-10 19:01:49* under *./results/* folder.
 
-**Inference Running**
+**9. Inference Running**
 
 To inference the previous model run:
 ```
 python main.py --ConfigPath "config/config_inference.yaml"
 ```
-
-**Training**
+**10. Training**
 
 For training run:
 ```
@@ -75,8 +83,7 @@ python main_training.py --ConfigPath "config/config_training.yaml"
 ```
 
 
-
-# Citation
+## Citation
 
 If you find this code and work useful, please consider citing:
 ```
@@ -91,7 +98,4 @@ If you find this code and work useful, please consider citing:
   doi={10.1109/TCSVT.2022.3207223}}
 }
 ```
-
-
-
 
