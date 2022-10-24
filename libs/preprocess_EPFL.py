@@ -70,7 +70,7 @@ def  process(data_path):
 if __name__ == '__main__':
 
 
-    data_path = './../datasets/'
+    data_path = './datasets/'
     sequences = os.listdir(data_path)
     for i in sequences:
         process(os.path.join(data_path, i))
