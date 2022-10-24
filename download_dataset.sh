@@ -32,5 +32,5 @@ wget https://documents.epfl.ch/groups/c/cv/cvlab-pom-video2/www/match5-c2.avi
 mv match5-c2.avi datasets/EPFL-Basketball/match5-c2/match5-c2.avi
 
 wget https://documents.epfl.ch/groups/c/cv/cvlab-pom-video2/www/match5-c3.avi
-mv match5-c3.avi datasets/EPFL-Basketball/match5-c0/match5-c3.avi
+mv match5-c3.avi datasets/EPFL-Basketball/match5-c3/match5-c3.avi
 
