@@ -62,12 +62,12 @@ python ./libs/preprocess_EPFL.py
 
 **7. Download pre-trained REID models**
 
-  Download the pre-trained REID models from http://www-vpu.eps.uam.es/publications/gnn_cca/files/trained_models.zip  , unzip the 4 folders and place them under *./trained_models/*
+  Download the pre-trained REID models from [http://www-vpu.eps.uam.es/publications/gnn_cca/files/trained_models.zip](http://www-vpu.eps.uam.es/publications/gnn_cca/files/trained_models.zip)  , unzip the 4 folders and place them under *./trained_models/*
 
 **8. Download  a pre-trained GNN-CCA model**
 
 We provide the weights of the GNN trained on the S1 set (see paper for detailes).
-Download the pre-trained weights from http://www-vpu.eps.uam.es/publications/gnn_cca/files/GNN_S1_Resnet50MCD_SGD0005_cosine20_BS64_BCE_all_step_BNcls_L4_2021-11-10 19_01_49.zip	 and place the folder *GNN_S1_Resnet50MCD_SGD0005_cosine20_BS64_BCE_all_step_BNcls_L4_2021-11-10 19:01:49* under *./results/* folder.
+Download the pre-trained weights from [http://www-vpu.eps.uam.es/publications/gnn_cca/files/GNN_S1_Resnet50MCD_SGD0005_cosine20_BS64_BCE_all_step_BNcls_L4_2021-11-10 19_01_49.zip](http://www-vpu.eps.uam.es/publications/gnn_cca/files/GNN_S1_Resnet50MCD_SGD0005_cosine20_BS64_BCE_all_step_BNcls_L4_2021-11-10%2019_01_49.zip)	 and place the folder *GNN_S1_Resnet50MCD_SGD0005_cosine20_BS64_BCE_all_step_BNcls_L4_2021-11-10 19:01:49* under *./results/* folder.
 
 **9. Inference Running**
 
