@@ -62,7 +62,7 @@ python ./libs/preprocess_EPFL.py
 
 **7. Download pre-trained REID models**
 
-  Download the pre-trained REID models from [here](https://www-vpu.eps.uam.es/publications/gnn_cca/files/trained_models.zip)   , unzip the 4 folders and place them under *./trained_models/*
+  Download the pre-trained REID models from [here](http://www-vpu.eps.uam.es/publications/gnn_cca/files/trained_models.zip)   , unzip the 4 folders and place them under *./trained_models/*
 
 **8. Download  a pre-trained GNN-CCA model**
 
