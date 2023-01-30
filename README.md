@@ -17,7 +17,7 @@ The repository has been tested in the following software.
 **1. Clone repository**
 
 ```
-git clone https://github.com/elun15/GNN-Cross-Camera-Association.git
+git clone https://github.com/vpulab/GNN-Cross-Camera-Association.git
 ```
 
 **2. Anaconda environment**
